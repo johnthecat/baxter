@@ -1,0 +1,23 @@
+{
+    "name": "baxter",
+    "version": "0.1.0",
+    "description": "Reactive binding with minimal additional layer",
+    "license": "MIT",
+    "homepage": "https://github.com/baxterjs/baxter",
+    "authors": [
+        "Sergey Zhuravlev <zhuravlev1337@gmail.com>"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/baxterjs/baxter.git"
+    },
+    "main": "./dist/index.min.js",
+    "ignore": [
+        "gulpfile.js",
+        "index.html",
+        "package.json",
+        "test",
+        "src",
+        "gulp"
+    ]
+}
