@@ -47,12 +47,8 @@ That's great, by this data is not reactive. Now let's try this:
    contructor() {
      this.surname = baxter.observable(this, 'surname', 'Dorian');
      this.name = baxter.observable(this, 'name', 'John');
-     this.fullName = baxter.computed(this, 'fullName', () => {
-       return this.surname + ' ' + this.name;
-     });
-     this.title = baxter.computed(this, 'fullName', () => {
-       return this.fullName + ' (' + this.age + ')';
-     });
+     this.fullName = baxter.computed(this, 'fullName', () => this.surname + ' ' + this.name);
+     this.title = baxter.computed(this, 'fullName', () => return this.fullName + ' (' + this.age + ')');
    }
  }
 
@@ -123,18 +119,18 @@ Class instances hasn't any difference between them, but:
       this.page = baxter.observable(this, 'page', 1);
 
       // Sync call
-      this.title = baxter.computed(this, 'title', () => {
-        return 'Here is ' + this.type + ' ' + this.name;
-      });
+      this.title = baxter.computed(this, 'title', () => 'Here is ' + this.type.replace('_', ' ') + ' ' + this.name);
 
       // Async call
-      this.fullInfo = baxter.computed(this /* owner */, 'title' /* key */, () => {
-        return fetch('/api/animal/' + this.type + '/' + this.name).then((response) => {
-            // this.page cannot be detected as dependency because of async nature of function,
-            // it's listed in the user dependencies
-            return response[this.page - 1];
-        });
-      } /* computed */, [
+      this.fullInfo = baxter.computed(this /* owner */, 'title' /* key */, () => fetch('/api/animal/' + this.type + '/' + this.name)
+        .then((response) => {
+         /**
+          * "this.page" cannot be detected as dependency because of
+          * async nature of function,
+          * it's listed in the user dependencies
+          */
+          return response[this.page - 1];
+        }); /* computed */, [
             {
                 owner: this,
                 key: 'page'
@@ -144,7 +140,14 @@ Class instances hasn't any difference between them, but:
     }
   }
 
-  let raccoonDasha = new Raccoon('Dasha');
+  let raccoonDasha = new Animal('raccoon', 'Dasha');
 
-  console.log(racconDasha.name) //Dasha
+  console.log(raccoonDasha.title) // Here is raccoon Dasha
+  console.log(raccoonDasha.fullInfo) // Promise, fetched to '/api/animal/raccoon/Dasha'
+
+  raccoonDasha.type = 'happy_raccoon';
+
+  console.log(raccoonDasha.title) //Here is happy raccoon Dasha
+  console.log(raccoonDasha.fullInfo) //another Promise, fetched to '/api/animal/happy_raccoon/Dasha'
+
 ```
