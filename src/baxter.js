@@ -2,6 +2,8 @@ import EventService from './services/event';
 import LibraryError from './entities/error';
 
 /**
+ * TODO: clear event service stack
+ * TODO: global storage for computed variables
  * TODO: handle exceptions inside computed
  * TODO: add array tracking
  * TODO: clear code
@@ -11,6 +13,122 @@ import LibraryError from './entities/error';
  * TODO: plugin handler
  * TODO: simple template engine as plugin (like in knockout.js)
  */
+
+
+class ObservableArray extends Array {
+    constructor(eventService, values) {
+        super();
+        Object.assign(this, values);
+        this.length = values.length;
+        this.eventStream = eventService;
+    }
+
+    push(value) {
+        let index = super.push(value);
+
+        this.eventStream.post('update', {
+            uid: uid,
+            owner: owner,
+            key: key,
+            value: this,
+            type: 'push',
+            changed: this[index]
+        });
+
+        return index;
+    }
+
+    shift() {
+        let deletedValue = super.shift();
+
+        this.eventStream.post('update', {
+            uid: uid,
+            owner: owner,
+            key: key,
+            value: this,
+            type: 'shift',
+            changed: deletedValue
+        });
+
+        return deletedValue;
+    }
+
+    pop() {
+        let lastValue = super.pop();
+
+        this.eventStream.post('update', {
+            uid: uid,
+            owner: owner,
+            key: key,
+            value: this,
+            type: 'pop',
+            changed: lastValue
+        });
+
+        return lastValue;
+    }
+
+    unshift(...values) {
+        let mergedArray = super.unshift.apply(this, values);
+
+        this.eventStream.post('update', {
+            uid: uid,
+            owner: owner,
+            key: key,
+            value: this,
+            type: 'unshift',
+            changed: values
+        });
+
+        return mergedArray;
+    }
+
+    reverse() {
+        let reversedArray = super.reverse();
+
+        this.eventStream.post('update', {
+            uid: uid,
+            owner: owner,
+            key: key,
+            value: this,
+            type: 'reverse',
+            changed: reversedArray
+        });
+
+        return reversedArray;
+    }
+
+    sort(sortFunction) {
+        let sortedArray = super.sort(sortFunction);
+
+        this.eventStream.post('update', {
+            uid: uid,
+            owner: owner,
+            key: key,
+            value: this,
+            type: 'sort',
+            changed: sortedArray
+        });
+
+        return sortedArray;
+    }
+
+    splice(...arguments) {
+        let splicedArray = super.splice.apply(this, arguments);
+
+        this.eventStream.post('update', {
+            uid: uid,
+            owner: owner,
+            key: key,
+            value: this,
+            type: 'splice',
+            changed: splicedArray
+        });
+
+        return splicedArray;
+    }
+}
+
 
 /**
  * @class Baxter
@@ -24,8 +142,6 @@ class Baxter {
          */
         let UID = 1;
 
-        this.objectUID = new Map();
-
         /**
          * @name Baxter.callstack
          * @type {Map}
@@ -35,7 +151,7 @@ class Baxter {
         /**
          * @name Baxter.eventStream
          * @type {EventService}
-         * @description Provides events inside library
+         * @description Provides events service
          */
         this.eventStream = new EventService(this);
 
@@ -47,17 +163,17 @@ class Baxter {
             createObjectUID: (object) => {
                 let uid = UID++;
 
-                this.objectUID.set(object, uid);
+                object['__uid__'] = uid;
 
                 return uid;
             },
 
             getUIDByObject: (object) => {
-                if (!this.objectUID.has(object)) {
+                if (!object['__uid__']) {
                     return this.utils.createObjectUID(object);
                 }
 
-                return this.objectUID.get(object);
+                return object['__uid__']
             },
 
             createKeyUID: (owner, key) => {
@@ -97,7 +213,7 @@ class Baxter {
         }
         let uid = this.utils.createKeyUID(owner, key);
 
-        this.eventStream.on('set', (config) => {
+        this.eventStream.on('update', (config) => {
             if (config.uid === uid) {
                 subscriber(config.value, config.oldValue);
             }
@@ -191,6 +307,7 @@ class Baxter {
 
         Object.defineProperty(owner, key,
             {
+                configurable: true,
                 set: (newValue) => {
                     if (newValue === value) {
                         return false;
@@ -201,7 +318,7 @@ class Baxter {
 
                         value = newValue;
 
-                        this.eventStream.post('set',
+                        this.eventStream.post('update',
                             {
                                 uid: uid,
                                 owner: owner,
@@ -231,7 +348,7 @@ class Baxter {
     }
 
     /**
-     *
+     * @name Baxter.computed
      * @param {Object} owner
      * @param {String} key
      * @param {Function} computedObservable
@@ -270,7 +387,7 @@ class Baxter {
                                 return false;
                             }
 
-                            this.eventStream.post('set', {
+                            this.eventStream.post('update', {
                                 uid: computedUID,
                                 owner: owner,
                                 key: key,
@@ -296,12 +413,6 @@ class Baxter {
 
                 isComputing = true;
             });
-
-            this.subscribe(handledValue.owner, handledValue.key, () => {
-                if (!isComputing) {
-                    handleChange();
-                }
-            });
         };
 
         this.eventStream.post('registered', {
@@ -319,6 +430,7 @@ class Baxter {
         value = this.getDependencies(computedObservable, handleObservable);
 
         Object.defineProperty(owner, key, {
+            configurable: true,
             get: () => {
                 this.eventStream.post('get', {
                     uid: computedUID,
@@ -338,6 +450,59 @@ class Baxter {
         });
 
         return value;
+    }
+
+    array(owner, key, initialValues) {
+        let uid = this.utils.createKeyUID(owner, key);
+
+        //TODO: track dependencies
+
+        let observableArray = new ObservableArray(this.eventStream, initialValues);
+
+        owner[key] = observableArray;
+
+        Object.defineProperty(owner, key, {
+            configurable: true,
+            get: () => {
+                return observableArray;
+            },
+            set: (value) => {
+                baxter.eventStream.post('update', {
+                    uid: uid,
+                    owner: owner,
+                    key: key,
+                    value: value
+                });
+
+                return value;
+            }
+        });
+
+        return observableArray;
+    }
+
+    /**
+     * @name Baxter.watch
+     * @param {Object} object
+     */
+    watch(object) {
+        for (let key in object) {
+            if (!object.hasOwnProperty(key)) {
+                continue;
+            }
+
+            let value = object[key];
+            if (typeof value === 'function') {
+                this.computed(object, key, value);
+
+            } else if (Object.prototype.toString.call(value) === '[object Array]') {
+                this.array(object, key, value);
+            } else {
+                this.observable(object, key, value);
+            }
+        }
+
+        return object;
     }
 }
 
