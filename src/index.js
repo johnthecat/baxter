@@ -24,6 +24,19 @@ import Baxter from './baxter';
                 return this.name + ' ' + this.surname;
             };
 
+            this.async = () => {
+                let name = this.name;
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve(name + ' async');
+                    }, 2000);
+                });
+            };
+
+            this.depFromAsync = () => {
+                return this.async + ' dependency!';
+            };
+
             this.array = [1, 2 ,3 ,4, 5, 6, 7, 8];
         }
     }

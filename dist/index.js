@@ -80,6 +80,19 @@
 	            return _this.name + ' ' + _this.surname;
 	        };
 
+	        this.async = function () {
+	            var name = _this.name;
+	            return new Promise(function (resolve) {
+	                setTimeout(function () {
+	                    resolve(name + ' async');
+	                }, 2000);
+	            });
+	        };
+
+	        this.depFromAsync = function () {
+	            return _this.async + ' dependency!';
+	        };
+
 	        this.array = [1, 2, 3, 4, 5, 6, 7, 8];
 	    };
 
@@ -115,7 +128,7 @@
 
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+	var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
@@ -363,18 +376,27 @@
 	     * @param {Object} owner
 	     * @param {String} key
 	     * @param {Function} subscriber
+	     * @param {String} [eventType]
 	     * @throws {LibraryError}
 	     */
 
 	    _createClass(Baxter, [{
 	        key: 'subscribe',
 	        value: function subscribe(owner, key, subscriber) {
+	            var eventType = arguments.length <= 3 || arguments[3] === undefined ? 'update' : arguments[3];
+
 	            if (!owner || !key || !subscriber) {
 	                throw new _entitiesError2['default']('can\'t subscribe variable without owner, key or callback function.');
 	            }
 	            var uid = this.utils.createKeyUID(owner, key);
+	            var availableEvents = ['will-change', 'update'];
+	            var eventToListen = availableEvents.indexOf(eventType) !== -1 && eventType;
 
-	            this.eventStream.on('update', function (config) {
+	            if (!eventToListen) {
+	                throw new _entitiesError2['default']('subscribe: listening ' + eventType + ' event is not accepted.');
+	            }
+
+	            this.eventStream.on(eventToListen, function (config) {
 	                if (config.uid === uid) {
 	                    subscriber(config.value, config.oldValue);
 	                }
@@ -423,7 +445,7 @@
 	         * @name Baxter.getDependencies
 	         * @param {Function} computed
 	         * @param {Function} callback
-	         * @returns {*}
+	         * @returns {Promise}
 	         */
 	    }, {
 	        key: 'getDependencies',
@@ -432,7 +454,11 @@
 	            var computingResult = computed();
 	            this.eventStream.off('get', callback);
 
-	            return computingResult;
+	            return new Promise(function (resolve) {
+	                resolve(computingResult);
+	            }).then(function (result) {
+	                return result;
+	            });
 	        }
 
 	        /**
@@ -493,12 +519,6 @@
 	            var value = initialValue;
 	            var uid = this.utils.createKeyUID(owner, key);
 
-	            this.eventStream.post('registered', {
-	                uid: uid,
-	                owner: owner,
-	                key: key
-	            });
-
 	            Object.defineProperty(owner, key, {
 	                configurable: true,
 	                set: function set(newValue) {
@@ -552,60 +572,8 @@
 	            var oldValue = undefined;
 	            var isComputing = false;
 	            var computedUID = this.utils.createKeyUID(owner, key);
+	            var canUpdate = false;
 	            var dependencies = new Set();
-	            var handleObservable = function handleObservable(handledValue) {
-	                if (handledValue.uid === computedUID) {
-	                    throw new _entitiesError2['default']('Circular dependencies detected on ' + key + ' value.');
-	                }
-
-	                dependencies.add(_this4.utils.createKeyUID(handledValue.owner, handledValue.key));
-
-	                /**
-	                 * Event listen: One of dependency will resolve later
-	                 */
-	                _this4.eventStream.on('will-change', function (willChange) {
-	                    /**
-	                     * Don't change anything if value if not current handled or variable is computing now
-	                     */
-	                    if (willChange.uid !== handledValue.uid || isComputing) {
-	                        return false;
-	                    }
-
-	                    /**
-	                     * Add resolve to global stack
-	                     */
-	                    _this4.addToStack(owner, key, function () {
-	                        return _this4.resolve(dependencies).then(function () {
-	                            oldValue = value;
-	                            value = computedObservable.call(owner);
-
-	                            return value;
-	                        }).then(function (value) {
-	                            isComputing = false;
-
-	                            if (oldValue === value) {
-	                                return false;
-	                            }
-
-	                            _this4.eventStream.post('update', {
-	                                uid: computedUID,
-	                                owner: owner,
-	                                key: key,
-	                                value: value,
-	                                oldValue: oldValue
-	                            });
-	                        });
-	                    });
-
-	                    isComputing = true;
-	                });
-	            };
-
-	            this.eventStream.post('registered', {
-	                uid: computedUID,
-	                owner: owner,
-	                key: key
-	            });
 
 	            if (Symbol.iterator in Object(userDependencies)) {
 	                var _iteratorNormalCompletion2 = true;
@@ -634,8 +602,6 @@
 	                }
 	            }
 
-	            value = this.getDependencies(computedObservable, handleObservable);
-
 	            Object.defineProperty(owner, key, {
 	                configurable: true,
 	                get: function get() {
@@ -648,12 +614,59 @@
 
 	                    return value;
 	                },
-	                set: function set(value) {
-	                    if (value === value) {
-	                        return;
+	                set: function set(computedValue) {
+	                    if (!canUpdate) {
+	                        throw new _entitiesError2['default']('you can\'t set value to computed');
 	                    }
-	                    throw new _entitiesError2['default']('you can\'t set value to computed');
+	                    canUpdate = false;
+	                    value = computedValue;
+	                    _this4.eventStream.post('update', {
+	                        uid: computedUID,
+	                        owner: owner,
+	                        key: key,
+	                        value: value,
+	                        oldValue: oldValue
+	                    });
 	                }
+	            });
+
+	            this.getDependencies(computedObservable, function (handledValue) {
+	                if (handledValue.uid === computedUID) {
+	                    throw new _entitiesError2['default']('Circular dependencies detected on ' + key + ' value.');
+	                }
+
+	                dependencies.add(_this4.utils.createKeyUID(handledValue.owner, handledValue.key));
+
+	                _this4.subscribe(handledValue.owner, handledValue.key, function () {
+	                    if (isComputing) {
+	                        return false;
+	                    }
+
+	                    _this4.addToStack(owner, key, function () {
+	                        return _this4.resolve(dependencies).then(function () {
+	                            oldValue = value;
+	                            return computedObservable.call(owner);
+	                        }).then(function (value) {
+	                            isComputing = false;
+
+	                            if (oldValue === value) {
+	                                return false;
+	                            }
+
+	                            canUpdate = true;
+	                            owner[key] = value;
+	                        });
+	                    });
+
+	                    isComputing = true;
+	                }, 'will-change');
+	            }).then(function (resolvedValue) {
+	                _this4.addToStack(owner, key, function () {
+	                    return _this4.resolve(dependencies).then(function () {
+	                        canUpdate = true;
+	                        owner[key] = resolvedValue;
+	                    });
+	                });
 	            });
 
 	            return value;
@@ -661,6 +674,8 @@
 	    }, {
 	        key: 'array',
 	        value: function array(owner, key, initialValues) {
+	            var _this5 = this;
+
 	            var uid = this.utils.createKeyUID(owner, key);
 
 	            //TODO: track dependencies
@@ -675,7 +690,7 @@
 	                    return observableArray;
 	                },
 	                set: function set(value) {
-	                    baxter.eventStream.post('update', {
+	                    _this5.eventStream.post('update', {
 	                        uid: uid,
 	                        owner: owner,
 	                        key: key,

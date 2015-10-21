@@ -207,15 +207,22 @@ class Baxter {
      * @param {Object} owner
      * @param {String} key
      * @param {Function} subscriber
+     * @param {String} [eventType]
      * @throws {LibraryError}
      */
-    subscribe(owner, key, subscriber) {
+    subscribe(owner, key, subscriber, eventType = 'update') {
         if (!owner || !key || !subscriber) {
             throw new LibraryError('can\'t subscribe variable without owner, key or callback function.');
         }
         let uid = this.utils.createKeyUID(owner, key);
+        let availableEvents = ['will-change', 'update'];
+        let eventToListen = availableEvents.indexOf(eventType) !== -1 && eventType;
 
-        this.eventStream.on('update', (config) => {
+        if (!eventToListen) {
+            throw new LibraryError('subscribe: listening ' + eventType + ' event is not accepted.');
+        }
+
+        this.eventStream.on(eventToListen, (config) => {
             if (config.uid === uid) {
                 subscriber(config.value, config.oldValue);
             }
@@ -241,14 +248,16 @@ class Baxter {
      * @name Baxter.getDependencies
      * @param {Function} computed
      * @param {Function} callback
-     * @returns {*}
+     * @returns {Promise}
      */
     getDependencies(computed, callback) {
         this.eventStream.on('get', callback);
         let computingResult = computed();
         this.eventStream.off('get', callback);
 
-        return computingResult;
+        return new Promise((resolve) => {
+            resolve(computingResult);
+        }).then((result) => result);
     }
 
     /**
@@ -300,12 +309,6 @@ class Baxter {
     observable(owner, key, initialValue) {
         let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
-
-        this.eventStream.post('registered', {
-            uid: uid,
-            owner: owner,
-            key: key
-        });
 
         Object.defineProperty(owner, key,
             {
@@ -362,64 +365,14 @@ class Baxter {
         let oldValue;
         let isComputing = false;
         let computedUID = this.utils.createKeyUID(owner, key);
+        let canUpdate = false;
         let dependencies = new Set();
-        let handleObservable = (handledValue) => {
-            if (handledValue.uid === computedUID) {
-                throw new LibraryError('Circular dependencies detected on ' + key + ' value.');
-            }
-
-            dependencies.add(this.utils.createKeyUID(handledValue.owner, handledValue.key));
-
-            /**
-             * Event listen: One of dependency will resolve later
-             */
-            this.eventStream.on('will-change', (willChange) => {
-                /**
-                 * Don't change anything if value if not current handled or variable is computing now
-                 */
-                if (willChange.uid !== handledValue.uid || isComputing) {
-                    return false;
-                }
-
-                /**
-                 * Add resolve to global stack
-                 */
-                this.addToStack(owner, key, () => {
-                    return this.resolve(dependencies)
-                        .then(() => {
-                            oldValue = value;
-                            value = computedObservable.call(owner);
-
-                            return value;
-                        })
-                        .then((value) => {
-                            isComputing = false;
-
-                            if (oldValue === value) {
-                                return false;
-                            }
-
-                            this.eventStream.post('update', {
-                                uid: computedUID,
-                                owner: owner,
-                                key: key,
-                                value: value,
-                                oldValue: oldValue
-                            });
-                        });
-                });
-
-                isComputing = true;
-            });
-        };
 
         if (Symbol.iterator in Object(userDependencies)) {
             for (let userDependency of userDependencies) {
                 handleObservable(userDependency);
             }
         }
-
-        value = this.getDependencies(computedObservable, handleObservable);
 
         Object.defineProperty(owner, key, {
             configurable: true,
@@ -433,13 +386,64 @@ class Baxter {
 
                 return value;
             },
-            set: (value) => {
-                if (value === value) {
-                    return;
+            set: (computedValue) => {
+                if (!canUpdate) {
+                    throw new LibraryError('you can\'t set value to computed');
                 }
-                throw new LibraryError('you can\'t set value to computed');
+                canUpdate = false;
+                value = computedValue;
+                this.eventStream.post('update', {
+                    uid: computedUID,
+                    owner: owner,
+                    key: key,
+                    value: value,
+                    oldValue: oldValue
+                });
             }
         });
+
+        this.getDependencies(computedObservable, (handledValue) => {
+            if (handledValue.uid === computedUID) {
+                throw new LibraryError('Circular dependencies detected on ' + key + ' value.');
+            }
+
+            dependencies.add(this.utils.createKeyUID(handledValue.owner, handledValue.key));
+
+            this.subscribe(handledValue.owner, handledValue.key, () => {
+                if (isComputing) {
+                    return false;
+                }
+
+                this.addToStack(owner, key, () => {
+                    return this.resolve(dependencies)
+                        .then(() => {
+                            oldValue = value;
+                            return computedObservable.call(owner);
+                        })
+                        .then((value) => {
+                            isComputing = false;
+
+                            if (oldValue === value) {
+                                return false;
+                            }
+
+                            canUpdate = true;
+                            owner[key] = value;
+                        });
+                });
+
+                isComputing = true;
+            }, 'will-change');
+        })
+            .then((resolvedValue) => {
+                this.addToStack(owner, key, () => {
+                    return this.resolve(dependencies)
+                        .then(() => {
+                            canUpdate = true;
+                            owner[key] = resolvedValue;
+                        });
+                });
+            });
 
         return value;
     }
@@ -459,7 +463,7 @@ class Baxter {
                 return observableArray;
             },
             set: (value) => {
-                baxter.eventStream.post('update', {
+                this.eventStream.post('update', {
                     uid: uid,
                     owner: owner,
                     key: key,
