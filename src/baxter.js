@@ -3,7 +3,6 @@ import LibraryError from './entities/error';
 
 /**
  * TODO: clear event service stack
- * TODO: global storage for computed variables
  * TODO: handle exceptions inside computed
  * TODO: add array tracking
  * TODO: clear code
@@ -163,7 +162,10 @@ class Baxter {
             createObjectUID: (object) => {
                 let uid = UID++;
 
-                object['__uid__'] = uid;
+                Object.defineProperty(object, '__uid__', {
+                    enumerable: false,
+                    value: uid
+                });
 
                 return uid;
             },
@@ -368,7 +370,17 @@ class Baxter {
 
             dependencies.add(this.utils.createKeyUID(handledValue.owner, handledValue.key));
 
-            let handleChange = () => {
+            /**
+             * Event listen: One of dependency will resolve later
+             */
+            this.eventStream.on('will-change', (willChange) => {
+                /**
+                 * Don't change anything if value if not current handled or variable is computing now
+                 */
+                if (willChange.uid !== handledValue.uid || isComputing) {
+                    return false;
+                }
+
                 /**
                  * Add resolve to global stack
                  */
@@ -396,30 +408,10 @@ class Baxter {
                             });
                         });
                 });
-            };
-
-            /**
-             * Event listen: One of dependency will resolve later
-             */
-            this.eventStream.on('will-change', (willChange) => {
-                /**
-                 * Don't change anything if value if not current handled or variable is computing now
-                 */
-                if (willChange.uid !== handledValue.uid || isComputing) {
-                    return false;
-                }
-
-                handleChange();
 
                 isComputing = true;
             });
         };
-
-        this.eventStream.post('registered', {
-            uid: computedUID,
-            owner: owner,
-            key: key
-        });
 
         if (Symbol.iterator in Object(userDependencies)) {
             for (let userDependency of userDependencies) {
