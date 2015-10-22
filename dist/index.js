@@ -128,13 +128,9 @@
 
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-	var _get = function get(_x2, _x3, _x4) { var _again = true; _function: while (_again) { var object = _x2, property = _x3, receiver = _x4; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x2 = parent; _x3 = property; _x4 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 	var _servicesEvent = __webpack_require__(2);
 
@@ -143,6 +139,10 @@
 	var _entitiesError = __webpack_require__(3);
 
 	var _entitiesError2 = _interopRequireDefault(_entitiesError);
+
+	var _entitiesArray = __webpack_require__(4);
+
+	var _entitiesArray2 = _interopRequireDefault(_entitiesArray);
 
 	/**
 	 * TODO: clear event service stack
@@ -156,147 +156,10 @@
 	 * TODO: simple template engine as plugin (like in knockout.js)
 	 */
 
-	var ObservableArray = (function (_Array) {
-	    _inherits(ObservableArray, _Array);
-
-	    function ObservableArray(eventService, values) {
-	        _classCallCheck(this, ObservableArray);
-
-	        _get(Object.getPrototypeOf(ObservableArray.prototype), 'constructor', this).call(this);
-	        Object.assign(this, values);
-	        this.length = values.length;
-	        this.eventStream = eventService;
-	    }
-
-	    /**
-	     * @class Baxter
-	     * @description Main class, provides library as it self.
-	     */
-
-	    _createClass(ObservableArray, [{
-	        key: 'push',
-	        value: function push(value) {
-	            var index = _get(Object.getPrototypeOf(ObservableArray.prototype), 'push', this).call(this, value);
-
-	            this.eventStream.post('update', {
-	                uid: uid,
-	                owner: owner,
-	                key: key,
-	                value: this,
-	                type: 'push',
-	                changed: this[index]
-	            });
-
-	            return index;
-	        }
-	    }, {
-	        key: 'shift',
-	        value: function shift() {
-	            var deletedValue = _get(Object.getPrototypeOf(ObservableArray.prototype), 'shift', this).call(this);
-
-	            this.eventStream.post('update', {
-	                uid: uid,
-	                owner: owner,
-	                key: key,
-	                value: this,
-	                type: 'shift',
-	                changed: deletedValue
-	            });
-
-	            return deletedValue;
-	        }
-	    }, {
-	        key: 'pop',
-	        value: function pop() {
-	            var lastValue = _get(Object.getPrototypeOf(ObservableArray.prototype), 'pop', this).call(this);
-
-	            this.eventStream.post('update', {
-	                uid: uid,
-	                owner: owner,
-	                key: key,
-	                value: this,
-	                type: 'pop',
-	                changed: lastValue
-	            });
-
-	            return lastValue;
-	        }
-	    }, {
-	        key: 'unshift',
-	        value: function unshift() {
-	            for (var _len = arguments.length, values = Array(_len), _key = 0; _key < _len; _key++) {
-	                values[_key] = arguments[_key];
-	            }
-
-	            var mergedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'unshift', this).apply(this, values);
-
-	            this.eventStream.post('update', {
-	                uid: uid,
-	                owner: owner,
-	                key: key,
-	                value: this,
-	                type: 'unshift',
-	                changed: values
-	            });
-
-	            return mergedArray;
-	        }
-	    }, {
-	        key: 'reverse',
-	        value: function reverse() {
-	            var reversedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'reverse', this).call(this);
-
-	            this.eventStream.post('update', {
-	                uid: uid,
-	                owner: owner,
-	                key: key,
-	                value: this,
-	                type: 'reverse',
-	                changed: reversedArray
-	            });
-
-	            return reversedArray;
-	        }
-	    }, {
-	        key: 'sort',
-	        value: function sort(sortFunction) {
-	            var sortedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'sort', this).call(this, sortFunction);
-
-	            this.eventStream.post('update', {
-	                uid: uid,
-	                owner: owner,
-	                key: key,
-	                value: this,
-	                type: 'sort',
-	                changed: sortedArray
-	            });
-
-	            return sortedArray;
-	        }
-	    }, {
-	        key: 'splice',
-	        value: function splice() {
-	            for (var _len2 = arguments.length, arguments = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-	                arguments[_key2] = arguments[_key2];
-	            }
-
-	            var splicedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'splice', this).apply(this, arguments);
-
-	            this.eventStream.post('update', {
-	                uid: uid,
-	                owner: owner,
-	                key: key,
-	                value: this,
-	                type: 'splice',
-	                changed: splicedArray
-	            });
-
-	            return splicedArray;
-	        }
-	    }]);
-
-	    return ObservableArray;
-	})(Array);
+	/**
+	 * @class Baxter
+	 * @description Main class, provides library as it self.
+	 */
 
 	var Baxter = (function () {
 	    function Baxter() {
@@ -620,6 +483,11 @@
 	                    }
 	                    canUpdate = false;
 	                    value = computedValue;
+
+	                    if (value === oldValue) {
+	                        return false;
+	                    }
+
 	                    _this4.eventStream.post('update', {
 	                        uid: computedUID,
 	                        owner: owner,
@@ -648,11 +516,6 @@
 	                            return computedObservable.call(owner);
 	                        }).then(function (value) {
 	                            isComputing = false;
-
-	                            if (oldValue === value) {
-	                                return false;
-	                            }
-
 	                            canUpdate = true;
 	                            owner[key] = value;
 	                        });
@@ -680,7 +543,7 @@
 
 	            //TODO: track dependencies
 
-	            var observableArray = new ObservableArray(this.eventStream, initialValues);
+	            var observableArray = new _entitiesArray2['default'](uid, owner, key, this.eventStream, initialValues);
 
 	            owner[key] = observableArray;
 
@@ -711,18 +574,18 @@
 	    }, {
 	        key: 'watch',
 	        value: function watch(object) {
-	            for (var _key3 in object) {
-	                if (!object.hasOwnProperty(_key3)) {
+	            for (var key in object) {
+	                if (!object.hasOwnProperty(key)) {
 	                    continue;
 	                }
 
-	                var value = object[_key3];
+	                var value = object[key];
 	                if (typeof value === 'function') {
-	                    this.computed(object, _key3, value);
+	                    this.computed(object, key, value);
 	                } else if (Object.prototype.toString.call(value) === '[object Array]') {
-	                    this.array(object, _key3, value);
+	                    this.array(object, key, value);
 	                } else {
-	                    this.observable(object, _key3, value);
+	                    this.observable(object, key, value);
 	                }
 	            }
 
@@ -924,6 +787,165 @@
 	};
 
 	exports['default'] = LibraryError;
+	module.exports = exports['default'];
+
+/***/ },
+/* 4 */
+/***/ function(module, exports) {
+
+	Object.defineProperty(exports, '__esModule', {
+	    value: true
+	});
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	var ObservableArray = (function (_Array) {
+	    _inherits(ObservableArray, _Array);
+
+	    function ObservableArray(uid, owner, key, eventService, values) {
+	        _classCallCheck(this, ObservableArray);
+
+	        _get(Object.getPrototypeOf(ObservableArray.prototype), 'constructor', this).call(this);
+	        Object.assign(this, values);
+	        this.length = values.length;
+	        this.eventStream = eventService;
+	        this.owner = owner;
+	        this.key = key;
+	        this.uid = uid;
+	    }
+
+	    _createClass(ObservableArray, [{
+	        key: 'push',
+	        value: function push(value) {
+	            var index = _get(Object.getPrototypeOf(ObservableArray.prototype), 'push', this).call(this, value);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this,
+	                type: 'push',
+	                changed: this[index]
+	            });
+
+	            return index;
+	        }
+	    }, {
+	        key: 'shift',
+	        value: function shift() {
+	            var deletedValue = _get(Object.getPrototypeOf(ObservableArray.prototype), 'shift', this).call(this);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this,
+	                type: 'shift',
+	                changed: deletedValue
+	            });
+
+	            return deletedValue;
+	        }
+	    }, {
+	        key: 'pop',
+	        value: function pop() {
+	            var lastValue = _get(Object.getPrototypeOf(ObservableArray.prototype), 'pop', this).call(this);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this,
+	                type: 'pop',
+	                changed: lastValue
+	            });
+
+	            return lastValue;
+	        }
+	    }, {
+	        key: 'unshift',
+	        value: function unshift() {
+	            for (var _len = arguments.length, values = Array(_len), _key = 0; _key < _len; _key++) {
+	                values[_key] = arguments[_key];
+	            }
+
+	            var mergedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'unshift', this).apply(this, values);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this,
+	                type: 'unshift',
+	                changed: values
+	            });
+
+	            return mergedArray;
+	        }
+	    }, {
+	        key: 'reverse',
+	        value: function reverse() {
+	            var reversedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'reverse', this).call(this);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this,
+	                type: 'reverse',
+	                changed: reversedArray
+	            });
+
+	            return reversedArray;
+	        }
+	    }, {
+	        key: 'sort',
+	        value: function sort(sortFunction) {
+	            var sortedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'sort', this).call(this, sortFunction);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this,
+	                type: 'sort',
+	                changed: sortedArray
+	            });
+
+	            return sortedArray;
+	        }
+	    }, {
+	        key: 'splice',
+	        value: function splice() {
+	            for (var _len2 = arguments.length, arguments = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+	                arguments[_key2] = arguments[_key2];
+	            }
+
+	            var splicedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'splice', this).apply(this, arguments);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this,
+	                type: 'splice',
+	                changed: splicedArray
+	            });
+
+	            return splicedArray;
+	        }
+	    }]);
+
+	    return ObservableArray;
+	})(Array);
+
+	exports['default'] = ObservableArray;
 	module.exports = exports['default'];
 
 /***/ }

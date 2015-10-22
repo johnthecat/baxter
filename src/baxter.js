@@ -1,5 +1,6 @@
 import EventService from './services/event';
 import LibraryError from './entities/error';
+import ObservableArray from './entities/array';
 
 /**
  * TODO: clear event service stack
@@ -12,121 +13,6 @@ import LibraryError from './entities/error';
  * TODO: plugin handler
  * TODO: simple template engine as plugin (like in knockout.js)
  */
-
-
-class ObservableArray extends Array {
-    constructor(eventService, values) {
-        super();
-        Object.assign(this, values);
-        this.length = values.length;
-        this.eventStream = eventService;
-    }
-
-    push(value) {
-        let index = super.push(value);
-
-        this.eventStream.post('update', {
-            uid: uid,
-            owner: owner,
-            key: key,
-            value: this,
-            type: 'push',
-            changed: this[index]
-        });
-
-        return index;
-    }
-
-    shift() {
-        let deletedValue = super.shift();
-
-        this.eventStream.post('update', {
-            uid: uid,
-            owner: owner,
-            key: key,
-            value: this,
-            type: 'shift',
-            changed: deletedValue
-        });
-
-        return deletedValue;
-    }
-
-    pop() {
-        let lastValue = super.pop();
-
-        this.eventStream.post('update', {
-            uid: uid,
-            owner: owner,
-            key: key,
-            value: this,
-            type: 'pop',
-            changed: lastValue
-        });
-
-        return lastValue;
-    }
-
-    unshift(...values) {
-        let mergedArray = super.unshift.apply(this, values);
-
-        this.eventStream.post('update', {
-            uid: uid,
-            owner: owner,
-            key: key,
-            value: this,
-            type: 'unshift',
-            changed: values
-        });
-
-        return mergedArray;
-    }
-
-    reverse() {
-        let reversedArray = super.reverse();
-
-        this.eventStream.post('update', {
-            uid: uid,
-            owner: owner,
-            key: key,
-            value: this,
-            type: 'reverse',
-            changed: reversedArray
-        });
-
-        return reversedArray;
-    }
-
-    sort(sortFunction) {
-        let sortedArray = super.sort(sortFunction);
-
-        this.eventStream.post('update', {
-            uid: uid,
-            owner: owner,
-            key: key,
-            value: this,
-            type: 'sort',
-            changed: sortedArray
-        });
-
-        return sortedArray;
-    }
-
-    splice(...arguments) {
-        let splicedArray = super.splice.apply(this, arguments);
-
-        this.eventStream.post('update', {
-            uid: uid,
-            owner: owner,
-            key: key,
-            value: this,
-            type: 'splice',
-            changed: splicedArray
-        });
-
-        return splicedArray;
-    }
-}
 
 
 /**
@@ -392,6 +278,11 @@ class Baxter {
                 }
                 canUpdate = false;
                 value = computedValue;
+
+                if (value === oldValue) {
+                    return false;
+                }
+
                 this.eventStream.post('update', {
                     uid: computedUID,
                     owner: owner,
@@ -422,11 +313,6 @@ class Baxter {
                         })
                         .then((value) => {
                             isComputing = false;
-
-                            if (oldValue === value) {
-                                return false;
-                            }
-
                             canUpdate = true;
                             owner[key] = value;
                         });
@@ -453,7 +339,7 @@ class Baxter {
 
         //TODO: track dependencies
 
-        let observableArray = new ObservableArray(this.eventStream, initialValues);
+        let observableArray = new ObservableArray(uid, owner, key, this.eventStream, initialValues);
 
         owner[key] = observableArray;
 
