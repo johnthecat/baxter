@@ -1,10 +1,7 @@
 import EventService from './services/event';
 import LibraryError from './entities/error';
-import ObservableArray from './entities/array';
 
 /**
- * TODO: gzip with https://github.com/jstuckey/gulp-gzip
- * TODO: handle exceptions inside computed
  * TODO: add array tracking
  * TODO: clear code
  * TODO: documentation
@@ -13,7 +10,6 @@ import ObservableArray from './entities/array';
  * TODO: plugin handler
  * TODO: simple template engine as plugin (like in knockout.js)
  */
-
 
 /**
  * @class Baxter
@@ -51,6 +47,11 @@ class Baxter {
          * @type {Object}
          */
         this.utils = {
+            /**
+             * @name Baxter.utils.createObjectUID
+             * @param object
+             * @returns {number}
+             */
             createObjectUID: (object) => {
                 let uid = UID++;
 
@@ -62,6 +63,11 @@ class Baxter {
                 return uid;
             },
 
+            /**
+             * @name Baxter.utils.getUIDByObject
+             * @param object
+             * @returns {*}
+             */
             getUIDByObject: (object) => {
                 if (!object['__uid__']) {
                     return this.utils.createObjectUID(object);
@@ -70,39 +76,42 @@ class Baxter {
                 return object['__uid__']
             },
 
+            /**
+             * @name Baxter.utils.createKeyUID
+             * @param owner
+             * @param key
+             * @returns {string}
+             */
             createKeyUID: (owner, key) => {
                 return this.utils.getUIDByObject(owner) + ':' + key;
+            },
+
+            /**
+             * @name Baxter.utils.debounce
+             * @param {Function} func
+             * @param {Number} wait
+             * @returns {Function} debounced function
+             */
+            debounce: (func, wait) => {
+                var timeout;
+                return () => {
+                    let later = () => {
+                        func();
+                        timeout = null;
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
             }
         };
 
-
-        this.subscribeEvent('will-change', this.debounce(() => this.postEvent('will-change-all'), 20));
-    }
-
-    //TODO: move to utils
-    /**
-     * @name Baxter.debounce
-     * @param {Function} func
-     * @param {Number} wait
-     * @returns {Function} debounced function
-     */
-    debounce(func, wait) {
-        var timeout;
-        return () => {
-            let later = () => {
-                func();
-                timeout = null;
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+        this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 20));
     }
 
     /**
      * @name Baxter.dispose
      * @param owner
      * @param key
-     * @returns {boolean}
      */
     dispose(owner, key) {
         if (!key) {
@@ -121,14 +130,12 @@ class Baxter {
 
                 this.variables.delete(uid);
             }
-
-            return true;
         } else {
             let uid = this.utils.createKeyUID(owner, key);
             let handlers = this.variables.get(uid);
 
             if (!handlers) {
-                return false;
+                return;
             }
 
             for (let handler of handlers) {
@@ -144,12 +151,17 @@ class Baxter {
      * @name Baxter.subscribeEvent
      * @param {String} eventType
      * @param {Function} subscriber
+     * @param {Boolean} [once]
      */
-    subscribeEvent(eventType, subscriber) {
-        this.eventStream.on(eventType, subscriber);
+    subscribeEvent(eventType, subscriber, once = false) {
+        if (once) {
+            this.eventStream.once(eventType, subscriber);
+        } else {
+            this.eventStream.on(eventType, subscriber);
 
-        return {
-            dispose: () => this.eventStream.off(eventType, subscriber)
+            return {
+                dispose: () => this.eventStream.off(eventType, subscriber)
+            }
         }
     }
 
@@ -168,9 +180,10 @@ class Baxter {
      * @param {String} key
      * @param {Function} subscriber
      * @param {String} [eventType]
+     * @param {Boolean} [once]
      * @throws {LibraryError}
      */
-    subscribe(owner, key, subscriber, eventType = 'update') {
+    subscribe(owner, key, subscriber, eventType = 'update', once = false) {
         if (!owner || !key || !subscriber) {
             throw new LibraryError('can\'t subscribe variable without owner, key or callback function.');
         }
@@ -187,7 +200,7 @@ class Baxter {
             throw new LibraryError('subscribe: listening ' + eventType + ' event is not accepted.');
         }
 
-        return this.subscribeEvent(eventToListen, eventHandler);
+        return this.subscribeEvent(eventToListen, eventHandler, once);
     }
 
     /**
@@ -248,6 +261,7 @@ class Baxter {
             /**
              * When will change chain is complete, then resolve
              */
+            this.
             this.eventStream.once('will-change-all', () => {
                 let resolveResult = callback();
                 if (resolveResult instanceof Promise) {
@@ -388,6 +402,11 @@ class Baxter {
                             isComputing = false;
                             canUpdate = true;
                             owner[key] = value;
+                        })
+                        .catch(() => {
+                            isComputing = false;
+                            canUpdate = true;
+                            owner[key] = undefined;
                         });
                 });
 
@@ -417,35 +436,6 @@ class Baxter {
         return value;
     }
 
-    array(owner, key, initialValues) {
-        let uid = this.utils.createKeyUID(owner, key);
-
-        //TODO: track dependencies
-
-        let observableArray = new ObservableArray(uid, owner, key, this.eventStream, initialValues);
-
-        owner[key] = observableArray;
-
-        Object.defineProperty(owner, key, {
-            configurable: true,
-            get: () => {
-                return observableArray;
-            },
-            set: (value) => {
-                this.eventStream.post('update', {
-                    uid: uid,
-                    owner: owner,
-                    key: key,
-                    value: value
-                });
-
-                return value;
-            }
-        });
-
-        return observableArray;
-    }
-
     /**
      * @name Baxter.watch
      * @param {Object} object
@@ -460,9 +450,7 @@ class Baxter {
             if (typeof value === 'function') {
                 this.computed(object, key, value);
 
-            } /*else if (Object.prototype.toString.call(value) === '[object Array]') {
-                this.array(object, key, value);
-            }*/ else {
+            } else {
                 this.observable(object, key, value);
             }
         }
@@ -471,4 +459,4 @@ class Baxter {
     }
 }
 
-export default Baxter;
+export default new Baxter();

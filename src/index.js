@@ -1,8 +1,6 @@
-import Baxter from './baxter';
+import baxter from './baxter';
 
-((name, constructor, browserContext) => {
-    let lib = new constructor();
-
+((name, lib, browserContext) => {
     if (browserContext) {
         browserContext[name] = lib;
     } else if (typeof exports !== 'undefined') {
@@ -32,6 +30,10 @@ import Baxter from './baxter';
         let test = new Test();
 
         lib.watch(test);
+
+        test.name = 'John';
+        test.surname = 'Dorian';
+
         lib.dispose(test);
     }
 
@@ -60,4 +62,4 @@ import Baxter from './baxter';
 
     //lib.eventStream.on('update', (changes) => console.log('update', changes.uid, ': ', changes.value));
 
-})('baxter', Baxter, window);
+})('baxter', baxter, window);

@@ -52,9 +52,7 @@
 
 	var _baxter2 = _interopRequireDefault(_baxter);
 
-	(function (name, constructor, browserContext) {
-	    var lib = new constructor();
-
+	(function (name, lib, browserContext) {
 	    if (browserContext) {
 	        browserContext[name] = lib;
 	    } else if (true) {
@@ -87,6 +85,10 @@
 	        var test = new Test();
 
 	        lib.watch(test);
+
+	        test.name = 'John';
+	        test.surname = 'Dorian';
+
 	        lib.dispose(test);
 	    }
 
@@ -140,13 +142,7 @@
 
 	var _entitiesError2 = _interopRequireDefault(_entitiesError);
 
-	var _entitiesArray = __webpack_require__(4);
-
-	var _entitiesArray2 = _interopRequireDefault(_entitiesArray);
-
 	/**
-	 * TODO: gzip with https://github.com/jstuckey/gulp-gzip
-	 * TODO: handle exceptions inside computed
 	 * TODO: add array tracking
 	 * TODO: clear code
 	 * TODO: documentation
@@ -197,6 +193,11 @@
 	         * @type {Object}
 	         */
 	        this.utils = {
+	            /**
+	             * @name Baxter.utils.createObjectUID
+	             * @param object
+	             * @returns {number}
+	             */
 	            createObjectUID: function createObjectUID(object) {
 	                var uid = UID++;
 
@@ -208,6 +209,11 @@
 	                return uid;
 	            },
 
+	            /**
+	             * @name Baxter.utils.getUIDByObject
+	             * @param object
+	             * @returns {*}
+	             */
 	            getUIDByObject: function getUIDByObject(object) {
 	                if (!object['__uid__']) {
 	                    return _this.utils.createObjectUID(object);
@@ -216,45 +222,47 @@
 	                return object['__uid__'];
 	            },
 
+	            /**
+	             * @name Baxter.utils.createKeyUID
+	             * @param owner
+	             * @param key
+	             * @returns {string}
+	             */
 	            createKeyUID: function createKeyUID(owner, key) {
 	                return _this.utils.getUIDByObject(owner) + ':' + key;
+	            },
+
+	            /**
+	             * @name Baxter.utils.debounce
+	             * @param {Function} func
+	             * @param {Number} wait
+	             * @returns {Function} debounced function
+	             */
+	            debounce: function debounce(func, wait) {
+	                var timeout;
+	                return function () {
+	                    var later = function later() {
+	                        func();
+	                        timeout = null;
+	                    };
+	                    clearTimeout(timeout);
+	                    timeout = setTimeout(later, wait);
+	                };
 	            }
 	        };
 
-	        this.subscribeEvent('will-change', this.debounce(function () {
+	        this.subscribeEvent('will-change', this.utils.debounce(function () {
 	            return _this.postEvent('will-change-all');
 	        }, 20));
 	    }
 
-	    //TODO: move to utils
 	    /**
-	     * @name Baxter.debounce
-	     * @param {Function} func
-	     * @param {Number} wait
-	     * @returns {Function} debounced function
+	     * @name Baxter.dispose
+	     * @param owner
+	     * @param key
 	     */
 
 	    _createClass(Baxter, [{
-	        key: 'debounce',
-	        value: function debounce(func, wait) {
-	            var timeout;
-	            return function () {
-	                var later = function later() {
-	                    func();
-	                    timeout = null;
-	                };
-	                clearTimeout(timeout);
-	                timeout = setTimeout(later, wait);
-	            };
-	        }
-
-	        /**
-	         * @name Baxter.dispose
-	         * @param owner
-	         * @param key
-	         * @returns {boolean}
-	         */
-	    }, {
 	        key: 'dispose',
 	        value: function dispose(owner, key) {
 	            if (!key) {
@@ -315,14 +323,12 @@
 	                        }
 	                    }
 	                }
-
-	                return true;
 	            } else {
 	                var uid = this.utils.createKeyUID(owner, key);
 	                var handlers = this.variables.get(uid);
 
 	                if (!handlers) {
-	                    return false;
+	                    return;
 	                }
 
 	                var _iteratorNormalCompletion3 = true;
@@ -359,19 +365,26 @@
 	         * @name Baxter.subscribeEvent
 	         * @param {String} eventType
 	         * @param {Function} subscriber
+	         * @param {Boolean} [once]
 	         */
 	    }, {
 	        key: 'subscribeEvent',
 	        value: function subscribeEvent(eventType, subscriber) {
 	            var _this2 = this;
 
-	            this.eventStream.on(eventType, subscriber);
+	            var once = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
 
-	            return {
-	                dispose: function dispose() {
-	                    return _this2.eventStream.off(eventType, subscriber);
-	                }
-	            };
+	            if (once) {
+	                this.eventStream.once(eventType, subscriber);
+	            } else {
+	                this.eventStream.on(eventType, subscriber);
+
+	                return {
+	                    dispose: function dispose() {
+	                        return _this2.eventStream.off(eventType, subscriber);
+	                    }
+	                };
+	            }
 	        }
 
 	        /**
@@ -391,12 +404,14 @@
 	         * @param {String} key
 	         * @param {Function} subscriber
 	         * @param {String} [eventType]
+	         * @param {Boolean} [once]
 	         * @throws {LibraryError}
 	         */
 	    }, {
 	        key: 'subscribe',
 	        value: function subscribe(owner, key, subscriber) {
 	            var eventType = arguments.length <= 3 || arguments[3] === undefined ? 'update' : arguments[3];
+	            var once = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
 
 	            if (!owner || !key || !subscriber) {
 	                throw new _entitiesError2['default']('can\'t subscribe variable without owner, key or callback function.');
@@ -414,7 +429,7 @@
 	                throw new _entitiesError2['default']('subscribe: listening ' + eventType + ' event is not accepted.');
 	            }
 
-	            return this.subscribeEvent(eventToListen, eventHandler);
+	            return this.subscribeEvent(eventToListen, eventHandler, once);
 	        }
 
 	        /**
@@ -506,7 +521,7 @@
 	                /**
 	                 * When will change chain is complete, then resolve
 	                 */
-	                _this3.eventStream.once('will-change-all', function () {
+	                _this3['this'].eventStream.once('will-change-all', function () {
 	                    var resolveResult = callback();
 	                    if (resolveResult instanceof Promise) {
 	                        resolveResult.then(function () {
@@ -646,6 +661,10 @@
 	                            isComputing = false;
 	                            canUpdate = true;
 	                            owner[key] = value;
+	                        })['catch'](function () {
+	                            isComputing = false;
+	                            canUpdate = true;
+	                            owner[key] = undefined;
 	                        });
 	                    });
 
@@ -693,38 +712,6 @@
 
 	            return value;
 	        }
-	    }, {
-	        key: 'array',
-	        value: function array(owner, key, initialValues) {
-	            var _this6 = this;
-
-	            var uid = this.utils.createKeyUID(owner, key);
-
-	            //TODO: track dependencies
-
-	            var observableArray = new _entitiesArray2['default'](uid, owner, key, this.eventStream, initialValues);
-
-	            owner[key] = observableArray;
-
-	            Object.defineProperty(owner, key, {
-	                configurable: true,
-	                get: function get() {
-	                    return observableArray;
-	                },
-	                set: function set(value) {
-	                    _this6.eventStream.post('update', {
-	                        uid: uid,
-	                        owner: owner,
-	                        key: key,
-	                        value: value
-	                    });
-
-	                    return value;
-	                }
-	            });
-
-	            return observableArray;
-	        }
 
 	        /**
 	         * @name Baxter.watch
@@ -741,11 +728,9 @@
 	                var value = object[key];
 	                if (typeof value === 'function') {
 	                    this.computed(object, key, value);
-	                } /*else if (Object.prototype.toString.call(value) === '[object Array]') {
-	                    this.array(object, key, value);
-	                  }*/else {
-	                        this.observable(object, key, value);
-	                    }
+	                } else {
+	                    this.observable(object, key, value);
+	                }
 	            }
 
 	            return object;
@@ -755,7 +740,7 @@
 	    return Baxter;
 	})();
 
-	exports['default'] = Baxter;
+	exports['default'] = new Baxter();
 	module.exports = exports['default'];
 
 /***/ },
@@ -936,165 +921,6 @@
 	};
 
 	exports['default'] = LibraryError;
-	module.exports = exports['default'];
-
-/***/ },
-/* 4 */
-/***/ function(module, exports) {
-
-	Object.defineProperty(exports, '__esModule', {
-	    value: true
-	});
-
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-	var ObservableArray = (function (_Array) {
-	    _inherits(ObservableArray, _Array);
-
-	    function ObservableArray(uid, owner, key, eventService, values) {
-	        _classCallCheck(this, ObservableArray);
-
-	        _get(Object.getPrototypeOf(ObservableArray.prototype), 'constructor', this).call(this);
-	        Object.assign(this, values);
-	        this.length = values.length;
-	        this.eventStream = eventService;
-	        this.owner = owner;
-	        this.key = key;
-	        this.uid = uid;
-	    }
-
-	    _createClass(ObservableArray, [{
-	        key: 'push',
-	        value: function push(value) {
-	            var index = _get(Object.getPrototypeOf(ObservableArray.prototype), 'push', this).call(this, value);
-
-	            this.eventStream.post('update', {
-	                uid: this.uid,
-	                owner: this.owner,
-	                key: this.key,
-	                value: this,
-	                type: 'push',
-	                changed: this[index]
-	            });
-
-	            return index;
-	        }
-	    }, {
-	        key: 'shift',
-	        value: function shift() {
-	            var deletedValue = _get(Object.getPrototypeOf(ObservableArray.prototype), 'shift', this).call(this);
-
-	            this.eventStream.post('update', {
-	                uid: this.uid,
-	                owner: this.owner,
-	                key: this.key,
-	                value: this,
-	                type: 'shift',
-	                changed: deletedValue
-	            });
-
-	            return deletedValue;
-	        }
-	    }, {
-	        key: 'pop',
-	        value: function pop() {
-	            var lastValue = _get(Object.getPrototypeOf(ObservableArray.prototype), 'pop', this).call(this);
-
-	            this.eventStream.post('update', {
-	                uid: this.uid,
-	                owner: this.owner,
-	                key: this.key,
-	                value: this,
-	                type: 'pop',
-	                changed: lastValue
-	            });
-
-	            return lastValue;
-	        }
-	    }, {
-	        key: 'unshift',
-	        value: function unshift() {
-	            for (var _len = arguments.length, values = Array(_len), _key = 0; _key < _len; _key++) {
-	                values[_key] = arguments[_key];
-	            }
-
-	            var mergedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'unshift', this).apply(this, values);
-
-	            this.eventStream.post('update', {
-	                uid: this.uid,
-	                owner: this.owner,
-	                key: this.key,
-	                value: this,
-	                type: 'unshift',
-	                changed: values
-	            });
-
-	            return mergedArray;
-	        }
-	    }, {
-	        key: 'reverse',
-	        value: function reverse() {
-	            var reversedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'reverse', this).call(this);
-
-	            this.eventStream.post('update', {
-	                uid: this.uid,
-	                owner: this.owner,
-	                key: this.key,
-	                value: this,
-	                type: 'reverse',
-	                changed: reversedArray
-	            });
-
-	            return reversedArray;
-	        }
-	    }, {
-	        key: 'sort',
-	        value: function sort(sortFunction) {
-	            var sortedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'sort', this).call(this, sortFunction);
-
-	            this.eventStream.post('update', {
-	                uid: this.uid,
-	                owner: this.owner,
-	                key: this.key,
-	                value: this,
-	                type: 'sort',
-	                changed: sortedArray
-	            });
-
-	            return sortedArray;
-	        }
-	    }, {
-	        key: 'splice',
-	        value: function splice() {
-	            for (var _len2 = arguments.length, arguments = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-	                arguments[_key2] = arguments[_key2];
-	            }
-
-	            var splicedArray = _get(Object.getPrototypeOf(ObservableArray.prototype), 'splice', this).apply(this, arguments);
-
-	            this.eventStream.post('update', {
-	                uid: this.uid,
-	                owner: this.owner,
-	                key: this.key,
-	                value: this,
-	                type: 'splice',
-	                changed: splicedArray
-	            });
-
-	            return splicedArray;
-	        }
-	    }]);
-
-	    return ObservableArray;
-	})(Array);
-
-	exports['default'] = ObservableArray;
 	module.exports = exports['default'];
 
 /***/ }

@@ -3,3 +3,4 @@
 node_modules
 bench
 index.html
+src/entities/array.js
