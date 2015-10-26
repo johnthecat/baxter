@@ -24,19 +24,6 @@ import Baxter from './baxter';
                 return this.name + ' ' + this.surname;
             };
 
-            this.async = () => {
-                let name = this.name;
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve(name + ' async');
-                    }, 2000);
-                });
-            };
-
-            this.depFromAsync = () => {
-                return this.async + ' dependency!';
-            };
-
             this.array = [1, 2 ,3 ,4, 5, 6, 7, 8];
         }
     }
@@ -45,19 +32,32 @@ import Baxter from './baxter';
         let test = new Test();
 
         lib.watch(test);
+        lib.dispose(test);
     }
 
-    function bench() {
-        console.time('bench');
-        for(let i = 0; i < 10000; i++) {
+    function bench(times) {
+        if (!times) {
+
+            return;
+        }
+
+        for(let i = 0; i < 1000; i++) {
             scope();
         }
-        console.timeEnd('bench');
+
+        bench(--times);
     }
 
-    browserContext['bench'] = bench;
-    browserContext['test'] = lib.watch(new Test());
+    function perf(times = 5) {
+        let t0 = performance.now();
+        bench(times);
+        let t1 = performance.now();
+        console.log("Perf for " + times  + ': ' + (t1 - t0) + " milliseconds.")
+    }
 
-    lib.eventStream.on('update', (changes) => console.log('update', changes));
+    browserContext['perf'] = perf;
+    //browserContext['test'] = lib.watch(new Test());
+
+    //lib.eventStream.on('update', (changes) => console.log('update', changes.uid, ': ', changes.value));
 
 })('baxter', Baxter, window);

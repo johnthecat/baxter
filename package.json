@@ -1,6 +1,6 @@
 {
   "name": "baxter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reactive binding with minimal additional layer",
   "main": "./dist/index.min.js",
   "devDependencies": {

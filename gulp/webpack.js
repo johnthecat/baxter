@@ -40,7 +40,7 @@ gulp.task('build', function () {
         .pipe(gulp.dest(path.join(config.path.dist, '/')));
 });
 
-gulp.task('build:watch', function () {
+gulp.task('build:watch', ['build'], function () {
     gulp.watch(path.join(config.path.src, '/**/*.js'), ['build']);
 });
 
