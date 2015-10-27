@@ -5,12 +5,12 @@ Baxter
 
 ## Features
 
-* **Using ES6** - Library written in ES6 and compiled into ES5 by Babel. If you are using ES6 in your project - include library src and compile it in with your bundle.
+* **Using ES6** - Library written in ES6 and compiled into ES5 by Babel. If you are using ES6 in your project - include library src and compile it with your bundle.
 * **Easy to use** - The best interface is no interface. Use Baxter API only when constructing object, class instance or simple variable. After that just work with variables like always.
 * **Dependency resolving** - Don't care about multiple recalculating of computed variable - Baxter tracks all dependencies and refreshes value only then it should.
-* **Easy work with async functions** - Just return Promise in computed variable, and Baxter will resolve it automatically
-* **Event driven architecture** - No dirty checking, no extra work when idle, Baxter works only then you really need it. You can easily listen events from Baxter and provide your own logic.
+* **Event driven architecture** - No dirty checking, no extra work when idle, Baxter works only when you really need it. You can easily listen events from Baxter and provide your own logic.
 * **Correct async resolving** - If computed variable returns Promise, then field equals async call result, and all dependencies will wait until Promise get resolved.
+* **Really lightweight code** - Minified baxter size is only 8kb!
 
 ## About
 
