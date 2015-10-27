@@ -46,8 +46,6 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
 	var _baxter = __webpack_require__(1);
 
 	var _baxter2 = _interopRequireDefault(_baxter);
@@ -61,63 +59,6 @@
 	        }
 	        exports[name] = lib;
 	    }
-
-	    //TODO delete
-
-	    var Test = function Test() {
-	        var _this = this;
-
-	        _classCallCheck(this, Test);
-
-	        this.id = 1;
-
-	        this.name = 'Tom';
-	        this.surname = 'Jarvis';
-
-	        this.fullName = function () {
-	            return _this.name + ' ' + _this.surname;
-	        };
-
-	        this.array = [1, 2, 3, 4, 5, 6, 7, 8];
-	    };
-
-	    function scope() {
-	        var test = new Test();
-
-	        lib.watch(test);
-
-	        test.name = 'John';
-	        test.surname = 'Dorian';
-
-	        lib.dispose(test);
-	    }
-
-	    function bench(times) {
-	        if (!times) {
-
-	            return;
-	        }
-
-	        for (var i = 0; i < 1000; i++) {
-	            scope();
-	        }
-
-	        bench(--times);
-	    }
-
-	    function perf() {
-	        var times = arguments.length <= 0 || arguments[0] === undefined ? 5 : arguments[0];
-
-	        var t0 = performance.now();
-	        bench(times);
-	        var t1 = performance.now();
-	        console.log("Perf for " + times + ': ' + (t1 - t0) + " milliseconds.");
-	    }
-
-	    browserContext['perf'] = perf;
-	    //browserContext['test'] = lib.watch(new Test());
-
-	    //lib.eventStream.on('update', (changes) => console.log('update', changes.uid, ': ', changes.value));
 	})('baxter', _baxter2['default'], window);
 
 /***/ },
@@ -503,13 +444,6 @@
 	            var _this3 = this;
 
 	            var uid = this.utils.createKeyUID(owner, key);
-	            var handler = function handler(resolve) {
-	                _this3.callstack['delete'](uid);
-	                if (!_this3.callstack.size) {
-	                    _this3.postEvent('change-complete');
-	                }
-	                resolve();
-	            };
 
 	            this.postEvent('will-change', {
 	                uid: uid,
@@ -518,19 +452,14 @@
 	            });
 
 	            this.callstack.set(uid, new Promise(function (resolve) {
-	                /**
-	                 * When will change chain is complete, then resolve
-	                 */
-	                _this3['this'].eventStream.once('will-change-all', function () {
-	                    var resolveResult = callback();
-	                    if (resolveResult instanceof Promise) {
-	                        resolveResult.then(function () {
-	                            handler(resolve);
-	                        });
-	                    } else {
-	                        handler(resolve);
-	                    }
-	                });
+	                _this3.subscribeEvent('will-change-all', function () {
+	                    resolve(callback());
+	                }, true);
+	            }).then(function () {
+	                _this3.callstack['delete'](uid);
+	                if (!_this3.callstack.size) {
+	                    _this3.postEvent('change-complete');
+	                }
 	            }));
 	        }
 
@@ -561,7 +490,7 @@
 
 	                        value = newValue;
 
-	                        _this4.eventStream.post('update', {
+	                        _this4.postEvent('update', {
 	                            uid: uid,
 	                            owner: owner,
 	                            key: key,
@@ -572,7 +501,7 @@
 	                },
 
 	                get: function get() {
-	                    _this4.eventStream.post('get', {
+	                    _this4.postEvent('get', {
 	                        uid: uid,
 	                        owner: owner,
 	                        key: key,
@@ -611,7 +540,7 @@
 	            Object.defineProperty(owner, key, {
 	                configurable: true,
 	                get: function get() {
-	                    _this5.eventStream.post('get', {
+	                    _this5.postEvent('get', {
 	                        uid: computedUID,
 	                        owner: owner,
 	                        key: key,
@@ -631,7 +560,7 @@
 	                        return false;
 	                    }
 
-	                    _this5.eventStream.post('update', {
+	                    _this5.postEvent('update', {
 	                        uid: computedUID,
 	                        owner: owner,
 	                        key: key,

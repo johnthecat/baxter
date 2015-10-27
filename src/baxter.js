@@ -243,13 +243,6 @@ class Baxter {
      */
     addToStack(owner, key, callback) {
         let uid = this.utils.createKeyUID(owner, key);
-        let handler = (resolve) => {
-            this.callstack.delete(uid);
-            if (!this.callstack.size) {
-                this.postEvent('change-complete');
-            }
-            resolve();
-        };
 
         this.postEvent('will-change', {
             uid: uid,
@@ -258,21 +251,16 @@ class Baxter {
         });
 
         this.callstack.set(uid, new Promise((resolve) => {
-            /**
-             * When will change chain is complete, then resolve
-             */
-            this.
-            this.eventStream.once('will-change-all', () => {
-                let resolveResult = callback();
-                if (resolveResult instanceof Promise) {
-                    resolveResult.then(() => {
-                        handler(resolve);
-                    });
-                } else {
-                    handler(resolve);
+            this.subscribeEvent('will-change-all', () => {
+                resolve(callback());
+            }, true);
+        })
+            .then(() => {
+                this.callstack.delete(uid);
+                if (!this.callstack.size) {
+                    this.postEvent('change-complete');
                 }
-            });
-        }));
+            }));
     }
 
     /**
@@ -299,7 +287,7 @@ class Baxter {
 
                         value = newValue;
 
-                        this.eventStream.post('update',
+                        this.postEvent('update',
                             {
                                 uid: uid,
                                 owner: owner,
@@ -312,7 +300,7 @@ class Baxter {
                 },
 
                 get: () => {
-                    this.eventStream.post('get',
+                    this.postEvent('get',
                         {
                             uid: uid,
                             owner: owner,
@@ -350,7 +338,7 @@ class Baxter {
         Object.defineProperty(owner, key, {
             configurable: true,
             get: () => {
-                this.eventStream.post('get', {
+                this.postEvent('get', {
                     uid: computedUID,
                     owner: owner,
                     key: key,
@@ -370,7 +358,7 @@ class Baxter {
                     return false;
                 }
 
-                this.eventStream.post('update', {
+                this.postEvent('update', {
                     uid: computedUID,
                     owner: owner,
                     key: key,
@@ -449,7 +437,6 @@ class Baxter {
             let value = object[key];
             if (typeof value === 'function') {
                 this.computed(object, key, value);
-
             } else {
                 this.observable(object, key, value);
             }
