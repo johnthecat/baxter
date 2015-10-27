@@ -1,8 +1,6 @@
-import Baxter from './baxter';
+import baxter from './baxter';
 
-((name, constructor, browserContext) => {
-    let lib = new constructor();
-
+((name, lib, browserContext) => {
     if (browserContext) {
         browserContext[name] = lib;
     } else if (typeof exports !== 'undefined') {
@@ -11,5 +9,4 @@ import Baxter from './baxter';
         }
         exports[name] = lib;
     }
-
-})('baxter', Baxter, window);
+})('baxter', baxter, window);

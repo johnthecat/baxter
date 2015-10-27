@@ -2,7 +2,6 @@ import EventService from './services/event';
 import LibraryError from './entities/error';
 
 /**
- * TODO: handle exceptions inside computed
  * TODO: add array tracking
  * TODO: clear code
  * TODO: documentation
@@ -24,8 +23,6 @@ class Baxter {
          */
         let UID = 1;
 
-        this.objectUID = new Map();
-
         /**
          * @name Baxter.callstack
          * @type {Map}
@@ -33,9 +30,15 @@ class Baxter {
         this.callstack = new Map();
 
         /**
+         * @name Baxter.variables
+         * @type {Map}
+         */
+        this.variables = new Map();
+
+        /**
          * @name Baxter.eventStream
          * @type {EventService}
-         * @description Provides events inside library
+         * @description Provides events service
          */
         this.eventStream = new EventService(this);
 
@@ -44,44 +47,131 @@ class Baxter {
          * @type {Object}
          */
         this.utils = {
+            /**
+             * @name Baxter.utils.createObjectUID
+             * @param object
+             * @returns {number}
+             */
             createObjectUID: (object) => {
                 let uid = UID++;
 
-                this.objectUID.set(object, uid);
+                Object.defineProperty(object, '__uid__', {
+                    enumerable: false,
+                    value: uid
+                });
 
                 return uid;
             },
 
+            /**
+             * @name Baxter.utils.getUIDByObject
+             * @param object
+             * @returns {*}
+             */
             getUIDByObject: (object) => {
-                if (!this.objectUID.has(object)) {
+                if (!object['__uid__']) {
                     return this.utils.createObjectUID(object);
                 }
 
-                return this.objectUID.get(object);
+                return object['__uid__']
             },
 
+            /**
+             * @name Baxter.utils.createKeyUID
+             * @param owner
+             * @param key
+             * @returns {string}
+             */
             createKeyUID: (owner, key) => {
                 return this.utils.getUIDByObject(owner) + ':' + key;
+            },
+
+            /**
+             * @name Baxter.utils.debounce
+             * @param {Function} func
+             * @param {Number} wait
+             * @returns {Function} debounced function
+             */
+            debounce: (func, wait) => {
+                var timeout;
+                return () => {
+                    let later = () => {
+                        func();
+                        timeout = null;
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
             }
         };
 
-        function debounce(func, wait) {
-            var timeout;
-            return () => {
-                let later = () => {
-                    func();
-                    timeout = null;
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
+        this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 20));
+    }
+
+    /**
+     * @name Baxter.dispose
+     * @param owner
+     * @param key
+     */
+    dispose(owner, key) {
+        if (!key) {
+            for (let field of (Object.keys(owner))) {
+                let uid = this.utils.createKeyUID(owner, field);
+                let handlers = this.variables.get(uid);
+
+                if (!handlers) {
+                    continue;
+                }
+
+                for (let handler of handlers) {
+                    handler.dispose();
+                    delete owner[field];
+                }
+
+                this.variables.delete(uid);
+            }
+        } else {
+            let uid = this.utils.createKeyUID(owner, key);
+            let handlers = this.variables.get(uid);
+
+            if (!handlers) {
+                return;
+            }
+
+            for (let handler of handlers) {
+                handler.dispose();
+                delete owner[key];
+            }
+
+            this.variables.delete(uid);
         }
+    }
 
-        let handler = debounce(() => {
-            this.eventStream.post('will-change-all');
-        }, 20);
+    /**
+     * @name Baxter.subscribeEvent
+     * @param {String} eventType
+     * @param {Function} subscriber
+     * @param {Boolean} [once]
+     */
+    subscribeEvent(eventType, subscriber, once = false) {
+        if (once) {
+            this.eventStream.once(eventType, subscriber);
+        } else {
+            this.eventStream.on(eventType, subscriber);
 
-        this.eventStream.on('will-change', handler);
+            return {
+                dispose: () => this.eventStream.off(eventType, subscriber)
+            }
+        }
+    }
+
+    /**
+     * @name Baxter.postEvent
+     * @param {String} eventType
+     * @param {*} [data]
+     */
+    postEvent(eventType, data) {
+        this.eventStream.post(eventType, data);
     }
 
     /**
@@ -89,19 +179,28 @@ class Baxter {
      * @param {Object} owner
      * @param {String} key
      * @param {Function} subscriber
+     * @param {String} [eventType]
+     * @param {Boolean} [once]
      * @throws {LibraryError}
      */
-    subscribe(owner, key, subscriber) {
+    subscribe(owner, key, subscriber, eventType = 'update', once = false) {
         if (!owner || !key || !subscriber) {
             throw new LibraryError('can\'t subscribe variable without owner, key or callback function.');
         }
         let uid = this.utils.createKeyUID(owner, key);
-
-        this.eventStream.on('set', (config) => {
+        let availableEvents = ['will-change', 'update'];
+        let eventToListen = availableEvents.indexOf(eventType) !== -1 && eventType;
+        let eventHandler = (config) => {
             if (config.uid === uid) {
                 subscriber(config.value, config.oldValue);
             }
-        });
+        };
+
+        if (!eventToListen) {
+            throw new LibraryError('subscribe: listening ' + eventType + ' event is not accepted.');
+        }
+
+        return this.subscribeEvent(eventToListen, eventHandler, once);
     }
 
     /**
@@ -123,14 +222,17 @@ class Baxter {
      * @name Baxter.getDependencies
      * @param {Function} computed
      * @param {Function} callback
-     * @returns {*}
+     * @returns {Promise}
      */
     getDependencies(computed, callback) {
-        this.eventStream.on('get', callback);
+        let listener = this.subscribeEvent('get', callback);
         let computingResult = computed();
-        this.eventStream.off('get', callback);
 
-        return computingResult;
+        listener.dispose();
+
+        return new Promise((resolve) => {
+            resolve(computingResult);
+        }).then((result) => result);
     }
 
     /**
@@ -141,35 +243,24 @@ class Baxter {
      */
     addToStack(owner, key, callback) {
         let uid = this.utils.createKeyUID(owner, key);
-        let handler = (resolve) => {
-            this.callstack.delete(uid);
-            if (!this.callstack.size) {
-                this.eventStream.post('change-complete');
-            }
-            resolve();
-        };
 
-        this.eventStream.post('will-change', {
+        this.postEvent('will-change', {
             uid: uid,
             owner: owner,
             key: key
         });
 
         this.callstack.set(uid, new Promise((resolve) => {
-            /**
-             * When will change chain is complete, then resolve
-             */
-            this.eventStream.once('will-change-all', () => {
-                let resolveResult = callback();
-                if (resolveResult instanceof Promise) {
-                    resolveResult.then(() => {
-                        handler(resolve);
-                    });
-                } else {
-                    handler(resolve);
+            this.subscribeEvent('will-change-all', () => {
+                resolve(callback());
+            }, true);
+        })
+            .then(() => {
+                this.callstack.delete(uid);
+                if (!this.callstack.size) {
+                    this.postEvent('change-complete');
                 }
-            });
-        }));
+            }));
     }
 
     /**
@@ -183,14 +274,9 @@ class Baxter {
         let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
 
-        this.eventStream.post('registered', {
-            uid: uid,
-            owner: owner,
-            key: key
-        });
-
         Object.defineProperty(owner, key,
             {
+                configurable: true,
                 set: (newValue) => {
                     if (newValue === value) {
                         return false;
@@ -201,7 +287,7 @@ class Baxter {
 
                         value = newValue;
 
-                        this.eventStream.post('set',
+                        this.postEvent('update',
                             {
                                 uid: uid,
                                 owner: owner,
@@ -214,7 +300,7 @@ class Baxter {
                 },
 
                 get: () => {
-                    this.eventStream.post('get',
+                    this.postEvent('get',
                         {
                             uid: uid,
                             owner: owner,
@@ -231,7 +317,7 @@ class Baxter {
     }
 
     /**
-     *
+     * @name Baxter.computed
      * @param {Object} owner
      * @param {String} key
      * @param {Function} computedObservable
@@ -243,84 +329,16 @@ class Baxter {
         let oldValue;
         let isComputing = false;
         let computedUID = this.utils.createKeyUID(owner, key);
+        let canUpdate = false;
         let dependencies = new Set();
-        let handleObservable = (handledValue) => {
-            if (handledValue.uid === computedUID) {
-                throw new LibraryError('Circular dependencies detected on ' + key + ' value.');
-            }
+        let handlers = new Set();
 
-            dependencies.add(this.utils.createKeyUID(handledValue.owner, handledValue.key));
-
-            let handleChange = () => {
-                /**
-                 * Add resolve to global stack
-                 */
-                this.addToStack(owner, key, () => {
-                    return this.resolve(dependencies)
-                        .then(() => {
-                            oldValue = value;
-                            value = computedObservable.call(owner);
-
-                            return value;
-                        })
-                        .then((value) => {
-                            isComputing = false;
-
-                            if (oldValue === value) {
-                                return false;
-                            }
-
-                            this.eventStream.post('set', {
-                                uid: computedUID,
-                                owner: owner,
-                                key: key,
-                                value: value,
-                                oldValue: oldValue
-                            });
-                        });
-                });
-            };
-
-            /**
-             * Event listen: One of dependency will resolve later
-             */
-            this.eventStream.on('will-change', (willChange) => {
-                /**
-                 * Don't change anything if value if not current handled or variable is computing now
-                 */
-                if (willChange.uid !== handledValue.uid || isComputing) {
-                    return false;
-                }
-
-                handleChange();
-
-                isComputing = true;
-            });
-
-            this.subscribe(handledValue.owner, handledValue.key, () => {
-                if (!isComputing) {
-                    handleChange();
-                }
-            });
-        };
-
-        this.eventStream.post('registered', {
-            uid: computedUID,
-            owner: owner,
-            key: key
-        });
-
-        if (Symbol.iterator in Object(userDependencies)) {
-            for (let userDependency of userDependencies) {
-                handleObservable(userDependency);
-            }
-        }
-
-        value = this.getDependencies(computedObservable, handleObservable);
+        this.variables.set(computedUID, handlers);
 
         Object.defineProperty(owner, key, {
+            configurable: true,
             get: () => {
-                this.eventStream.post('get', {
+                this.postEvent('get', {
                     uid: computedUID,
                     owner: owner,
                     key: key,
@@ -329,16 +347,103 @@ class Baxter {
 
                 return value;
             },
-            set: (value) => {
-                if (value === value) {
-                    return;
+            set: (computedValue) => {
+                if (!canUpdate) {
+                    throw new LibraryError('you can\'t set value to computed');
                 }
-                throw new LibraryError('you can\'t set value to computed');
+                canUpdate = false;
+                value = computedValue;
+
+                if (value === oldValue) {
+                    return false;
+                }
+
+                this.postEvent('update', {
+                    uid: computedUID,
+                    owner: owner,
+                    key: key,
+                    value: value,
+                    oldValue: oldValue
+                });
             }
         });
 
+        let handleObservable = (handledValue) => {
+            if (handledValue.uid === computedUID) {
+                throw new LibraryError('Circular dependencies detected on ' + key + ' value.');
+            }
+
+            dependencies.add(this.utils.createKeyUID(handledValue.owner, handledValue.key));
+
+            let subscriber = this.subscribe(handledValue.owner, handledValue.key, () => {
+                if (isComputing) {
+                    return false;
+                }
+
+                this.addToStack(owner, key, () => {
+                    return this.resolve(dependencies)
+                        .then(() => {
+                            oldValue = value;
+                            return computedObservable.call(owner);
+                        })
+                        .then((value) => {
+                            isComputing = false;
+                            canUpdate = true;
+                            owner[key] = value;
+                        })
+                        .catch(() => {
+                            isComputing = false;
+                            canUpdate = true;
+                            owner[key] = undefined;
+                        });
+                });
+
+                isComputing = true;
+            }, 'will-change');
+
+            handlers.add(subscriber);
+        };
+
+        if (Symbol.iterator in Object(userDependencies)) {
+            for (let userDependency of userDependencies) {
+                handleObservable(userDependency);
+            }
+        }
+
+        this.getDependencies(computedObservable, handleObservable)
+            .then((resolvedValue) => {
+                this.addToStack(owner, key, () => {
+                    return this.resolve(dependencies)
+                        .then(() => {
+                            canUpdate = true;
+                            owner[key] = resolvedValue;
+                        });
+                });
+            });
+
         return value;
+    }
+
+    /**
+     * @name Baxter.watch
+     * @param {Object} object
+     */
+    watch(object) {
+        for (let key in object) {
+            if (!object.hasOwnProperty(key)) {
+                continue;
+            }
+
+            let value = object[key];
+            if (typeof value === 'function') {
+                this.computed(object, key, value);
+            } else {
+                this.observable(object, key, value);
+            }
+        }
+
+        return object;
     }
 }
 
-export default Baxter;
+export default new Baxter();

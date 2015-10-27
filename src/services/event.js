@@ -3,9 +3,30 @@
  */
 class EventService {
     constructor(defaultContext) {
-        this.channels = new Map();
+        /**
+         * @name EventService.channels
+         * @type {Object}
+         */
+        this.channels = {};
 
+        /**
+         * @name EventService.context
+         * @type {Object}
+         */
         this.context = defaultContext || this;
+    }
+
+    /**
+     * @name EventService.getEvent
+     * @param {String} event
+     * @returns {Set}
+     */
+    getEvent(event) {
+        if (!(event in this.channels)) {
+            return this.channels[event] = new Set();
+        }
+
+        return this.channels[event];
     }
 
     /**
@@ -18,11 +39,7 @@ class EventService {
             throw new Error("Can't init event listener: no parameters given");
         }
 
-        if (!this.channels.has(event)) {
-            this.channels.set(event, new Set());
-        }
-
-        this.channels.get(event).add(handler);
+        this.getEvent(event).add(handler);
     }
 
     /**
@@ -37,16 +54,14 @@ class EventService {
 
         let that = this;
 
-        if (!this.channels.has(event)) {
-            this.channels.set(event, new Set());
-        }
+        this.getEvent(event).add(handlerWrapper);
 
         function handlerWrapper(data) {
             that.off(event, handlerWrapper);
             return handler(data);
         }
 
-        this.channels.get(event).add(handlerWrapper);
+
     }
 
     /**
@@ -61,15 +76,15 @@ class EventService {
         }
 
         if (!handlerToDelete) {
-            return this.channels.delete(event);
+            return delete this.channels[event];
         }
 
-        let eventHandlers = this.channels.get(event);
+        let eventHandlers = this.channels[event];
 
         eventHandlers.delete(handlerToDelete);
 
         if (!eventHandlers.size) {
-            this.channels.delete(event);
+            delete this.channels[event];
         }
     }
 
@@ -77,36 +92,19 @@ class EventService {
      * @name EventService.post
      * @param {string} event
      * @param {*} data
-     * @returns {Promise}
      */
     post(event, data) {
         if (!event) {
             throw new Error("Can't post undefined event");
         }
 
-        if (!this.channels.has(event)) {
-            return new Promise((resolve) => resolve());
+        if (!(event in this.channels)) {
+            return false;
         }
 
-        if (event !== 'system:all') {
-            this.post('system:all', {
-                event: event,
-                data: data
-            });
-        }
-
-        return new Promise((resolve) => {
-            for (let handler of this.channels.get(event).values()) {
-                handler.call(this.context, data);
-            }
-            resolve();
-        });
-    }
-
-    all(handler) {
-        this.on('system:all', (data) => {
+        for (let handler of this.channels[event]) {
             handler.call(this.context, data);
-        });
+        }
     }
 }
 
