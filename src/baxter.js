@@ -221,9 +221,7 @@ class Baxter {
 
         listener.dispose();
 
-        return new Promise((resolve) => {
-            resolve(computingResult);
-        }).then((result) => result);
+        return computingResult;
     }
 
     /**
@@ -407,16 +405,9 @@ class Baxter {
             }
         }
 
-        this.getDependencies(owner, computedObservable, handleObservable)
-            .then((resolvedValue) => {
-                this.addToStack(owner, key, () => {
-                    return this.resolve(dependencies)
-                        .then(() => {
-                            canUpdate = true;
-                            owner[key] = resolvedValue;
-                        });
-                });
-            });
+        //TODO: check async call for correct work
+        canUpdate = true;
+        owner[key] = this.getDependencies(owner, computedObservable, handleObservable);
 
         return value;
     }

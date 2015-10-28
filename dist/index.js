@@ -416,11 +416,7 @@
 
 	            listener.dispose();
 
-	            return new Promise(function (resolve) {
-	                resolve(computingResult);
-	            }).then(function (result) {
-	                return result;
-	            });
+	            return computingResult;
 	        }
 
 	        /**
@@ -627,14 +623,9 @@
 	                }
 	            }
 
-	            this.getDependencies(owner, computedObservable, handleObservable).then(function (resolvedValue) {
-	                _this5.addToStack(owner, key, function () {
-	                    return _this5.resolve(dependencies).then(function () {
-	                        canUpdate = true;
-	                        owner[key] = resolvedValue;
-	                    });
-	                });
-	            });
+	            //TODO: check async call for correct work
+	            canUpdate = true;
+	            owner[key] = this.getDependencies(owner, computedObservable, handleObservable);
 
 	            return value;
 	        }
