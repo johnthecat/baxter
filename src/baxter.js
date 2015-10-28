@@ -220,13 +220,14 @@ class Baxter {
 
     /**
      * @name Baxter.getDependencies
+     * @param {Object} context
      * @param {Function} computed
      * @param {Function} callback
      * @returns {Promise}
      */
-    getDependencies(computed, callback) {
+    getDependencies(context, computed, callback) {
         let listener = this.subscribeEvent('get', callback);
-        let computingResult = computed();
+        let computingResult = computed.call(context);
 
         listener.dispose();
 
@@ -273,6 +274,12 @@ class Baxter {
     observable(owner, key, initialValue) {
         let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
+
+        if (this.variables.has(uid)) {
+            return initialValue;
+        }
+
+        this.variables.set(uid, new Set());
 
         Object.defineProperty(owner, key,
             {
@@ -333,6 +340,10 @@ class Baxter {
         let dependencies = new Set();
         let handlers = new Set();
 
+        if (this.variables.has(computedUID)) {
+            return computedObservable;
+        }
+
         this.variables.set(computedUID, handlers);
 
         Object.defineProperty(owner, key, {
@@ -369,11 +380,7 @@ class Baxter {
         });
 
         let handleObservable = (handledValue) => {
-            if (handledValue.uid === computedUID) {
-                throw new LibraryError('Circular dependencies detected on ' + key + ' value.');
-            }
-
-            dependencies.add(this.utils.createKeyUID(handledValue.owner, handledValue.key));
+            dependencies.add(handledValue.uid);
 
             let subscriber = this.subscribe(handledValue.owner, handledValue.key, () => {
                 if (isComputing) {
@@ -410,7 +417,7 @@ class Baxter {
             }
         }
 
-        this.getDependencies(computedObservable, handleObservable)
+        this.getDependencies(owner, computedObservable, handleObservable)
             .then((resolvedValue) => {
                 this.addToStack(owner, key, () => {
                     return this.resolve(dependencies)
