@@ -213,7 +213,7 @@ class Baxter {
      * @param {Object} context
      * @param {Function} computed
      * @param {Function} callback
-     * @returns {Promise}
+     * @returns {*} Result of computing
      */
     getDependencies(context, computed, callback) {
         let listener = this.subscribeEvent('get', callback);
@@ -405,9 +405,21 @@ class Baxter {
             }
         }
 
-        //TODO: check async call for correct work
-        canUpdate = true;
-        owner[key] = this.getDependencies(owner, computedObservable, handleObservable);
+        let calculatedValue = this.getDependencies(owner, computedObservable, handleObservable);
+        if (calculatedValue instanceof Promise) {
+            calculatedValue.then((result) => {
+                this.addToStack(owner, key, () => {
+                    return this.resolve(dependencies)
+                        .then(() => {
+                            canUpdate = true;
+                            owner[key] = result;
+                        });
+                });
+            });
+        } else {
+            canUpdate = true;
+            owner[key] = calculatedValue;
+        }
 
         return value;
     }
