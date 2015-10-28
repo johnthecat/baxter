@@ -2,16 +2,6 @@ import EventService from './services/event';
 import LibraryError from './entities/error';
 
 /**
- * TODO: add array tracking
- * TODO: clear code
- * TODO: documentation
- * TODO: unit-tests
- * TODO: performance tests
- * TODO: plugin handler
- * TODO: simple template engine as plugin (like in knockout.js)
- */
-
-/**
  * @class Baxter
  * @description Main class, provides library as it self.
  */
