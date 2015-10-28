@@ -95,7 +95,7 @@ class Baxter {
             }
         };
 
-        this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 20));
+        this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 0));
     }
 
     /**

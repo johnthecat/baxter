@@ -184,7 +184,7 @@
 
 	        this.subscribeEvent('will-change', this.utils.debounce(function () {
 	            return _this.postEvent('will-change-all');
-	        }, 20));
+	        }, 0));
 	    }
 
 	    /**
