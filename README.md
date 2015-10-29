@@ -10,7 +10,7 @@ Baxter
 * **Dependency resolving** - Don't care about multiple recalculating of computed variable - Baxter tracks all dependencies and refreshes value only then it should.
 * **Event driven architecture** - No dirty checking, no extra work when idle, Baxter works only when you really need it. You can easily listen events from Baxter and provide your own logic.
 * **Correct async resolving** - If computed variable returns Promise, then field equals async call result, and all dependencies will wait until Promise get resolved.
-* **Really lightweight code** - Minified baxter size is only 8kb!
+* **Really lightweight code** - Minified baxter size is only 9kb!
 
 ## About
 
