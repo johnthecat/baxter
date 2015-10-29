@@ -100,10 +100,14 @@ class Baxter {
 
     /**
      * @name Baxter.dispose
-     * @param owner
-     * @param key
+     * @param {Object} owner
+     * @param {String} [key]
      */
     dispose(owner, key) {
+        if (typeof owner !== 'object') {
+            throw new LibraryError('Dispose: object is not defined.');
+        }
+
         if (!key) {
             for (let field of (Object.keys(owner))) {
                 let uid = this.utils.createKeyUID(owner, field);
@@ -144,6 +148,14 @@ class Baxter {
      * @param {Boolean} [once]
      */
     subscribeEvent(eventType, subscriber, once = false) {
+        if (typeof eventType !== 'string') {
+            throw new LibraryError('subscribeEvent: eventType is not defined.');
+        }
+
+        if (typeof subscriber !== 'function') {
+            throw new LibraryError('subscribeEvent: subscriber function is not defined.');
+        }
+
         if (once) {
             this.eventStream.once(eventType, subscriber);
         } else {
@@ -161,6 +173,10 @@ class Baxter {
      * @param {*} [data]
      */
     postEvent(eventType, data) {
+        if (typeof eventType !== 'string') {
+            throw new LibraryError('postEvent: eventType is not defined.');
+        }
+
         this.eventStream.post(eventType, data);
     }
 
@@ -175,7 +191,7 @@ class Baxter {
      */
     subscribe(owner, key, subscriber, eventType = 'update', once = false) {
         if (!owner || !key || !subscriber) {
-            throw new LibraryError('can\'t subscribe variable without owner, key or callback function.');
+            throw new LibraryError('subscribe: can\'t subscribe variable without owner, key or callback function.');
         }
         let uid = this.utils.createKeyUID(owner, key);
         let availableEvents = ['will-change', 'update'];
@@ -195,10 +211,14 @@ class Baxter {
 
     /**
      * @name Baxter.resolve
-     * @param {Set} dependencies
+     * @param {Set|Array} dependencies
      * @returns {Promise}
      */
     resolve(dependencies) {
+        if (!(Symbol.iterator in dependencies)) {
+            throw new LibraryError('resolve: dependencies are not iterable.');
+        }
+
         let result = new Set();
 
         for (let dependency of dependencies) {
@@ -216,6 +236,10 @@ class Baxter {
      * @returns {*} Result of computing
      */
     getDependencies(context, computed, callback) {
+        if (!context || !computed || !callback) {
+            throw new LibraryError('getDependencies: there is no context, computed function or callback.');
+        }
+
         let listener = this.subscribeEvent('get', callback);
         let computingResult = computed.call(context);
 
@@ -256,10 +280,17 @@ class Baxter {
      * @name Baxter.observable
      * @param {Object} owner
      * @param {String} key
-     * @param {*} initialValue
+     * @param {*} [initialValue]
      * @returns {*} value
      */
     observable(owner, key, initialValue) {
+        if (typeof owner !== 'object') {
+            throw new LibraryError('observable: owner object in not defined.');
+        }
+        if (typeof key !== 'string') {
+            throw new LibraryError('observable: key string in not defined.');
+        }
+
         let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
 
@@ -320,6 +351,18 @@ class Baxter {
      * @returns {*}
      */
     computed(owner, key, computedObservable, userDependencies) {
+        if (typeof owner !== 'object') {
+            throw new LibraryError('computed: owner object in not defined.');
+        }
+
+        if (typeof key !== 'string') {
+            throw new LibraryError('computed: key string in not defined.');
+        }
+
+        if (typeof computedObservable !== 'function') {
+            throw new LibraryError('computed: computedObservable function in not defined.');
+        }
+
         let value;
         let oldValue;
         let isComputing = false;
@@ -429,6 +472,10 @@ class Baxter {
      * @param {Object} object
      */
     watch(object) {
+        if (typeof object !== 'object') {
+            throw new LibraryError('watch: object is not defined.');
+        }
+
         for (let key in object) {
             if (!object.hasOwnProperty(key)) {
                 continue;
