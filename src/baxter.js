@@ -476,6 +476,8 @@ class Baxter {
             throw new LibraryError('watch: object is not defined.');
         }
 
+        let computedVariables = [];
+
         for (let key in object) {
             if (!object.hasOwnProperty(key)) {
                 continue;
@@ -483,10 +485,19 @@ class Baxter {
 
             let value = object[key];
             if (typeof value === 'function') {
-                this.computed(object, key, value);
+                computedVariables.push({
+                    owner: object,
+                    key: key,
+                    value: value
+                });
             } else {
                 this.observable(object, key, value);
             }
+        }
+
+        for (let index = 0; index < computedVariables.length; index++) {
+            let computed = computedVariables[index];
+            this.computed(computed.owner, computed.key, computed.value);
         }
 
         return object;

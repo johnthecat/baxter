@@ -695,6 +695,8 @@
 	                throw new _entitiesError2['default']('watch: object is not defined.');
 	            }
 
+	            var computedVariables = [];
+
 	            for (var key in object) {
 	                if (!object.hasOwnProperty(key)) {
 	                    continue;
@@ -702,10 +704,19 @@
 
 	                var value = object[key];
 	                if (typeof value === 'function') {
-	                    this.computed(object, key, value);
+	                    computedVariables.push({
+	                        owner: object,
+	                        key: key,
+	                        value: value
+	                    });
 	                } else {
 	                    this.observable(object, key, value);
 	                }
+	            }
+
+	            for (var index = 0; index < computedVariables.length; index++) {
+	                var computed = computedVariables[index];
+	                this.computed(computed.owner, computed.key, computed.value);
 	            }
 
 	            return object;
