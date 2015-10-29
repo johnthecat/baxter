@@ -1,6 +1,11 @@
-class LibraryError {
+/**
+ * @name LibraryError
+ */
+class LibraryError extends Error {
     constructor(message) {
-        return new Error('[Twin.js]: ' + message);
+        super();
+
+        this.message = '[Twin.js]: ' + message;
     }
 }
 

@@ -2,16 +2,6 @@ import EventService from './services/event';
 import LibraryError from './entities/error';
 
 /**
- * TODO: add array tracking
- * TODO: clear code
- * TODO: documentation
- * TODO: unit-tests
- * TODO: performance tests
- * TODO: plugin handler
- * TODO: simple template engine as plugin (like in knockout.js)
- */
-
-/**
  * @class Baxter
  * @description Main class, provides library as it self.
  */
@@ -105,15 +95,19 @@ class Baxter {
             }
         };
 
-        this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 20));
+        this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 0));
     }
 
     /**
      * @name Baxter.dispose
-     * @param owner
-     * @param key
+     * @param {Object} owner
+     * @param {String} [key]
      */
     dispose(owner, key) {
+        if (typeof owner !== 'object') {
+            throw new LibraryError('Dispose: object is not defined.');
+        }
+
         if (!key) {
             for (let field of (Object.keys(owner))) {
                 let uid = this.utils.createKeyUID(owner, field);
@@ -154,6 +148,14 @@ class Baxter {
      * @param {Boolean} [once]
      */
     subscribeEvent(eventType, subscriber, once = false) {
+        if (typeof eventType !== 'string') {
+            throw new LibraryError('subscribeEvent: eventType is not defined.');
+        }
+
+        if (typeof subscriber !== 'function') {
+            throw new LibraryError('subscribeEvent: subscriber function is not defined.');
+        }
+
         if (once) {
             this.eventStream.once(eventType, subscriber);
         } else {
@@ -171,6 +173,10 @@ class Baxter {
      * @param {*} [data]
      */
     postEvent(eventType, data) {
+        if (typeof eventType !== 'string') {
+            throw new LibraryError('postEvent: eventType is not defined.');
+        }
+
         this.eventStream.post(eventType, data);
     }
 
@@ -185,7 +191,7 @@ class Baxter {
      */
     subscribe(owner, key, subscriber, eventType = 'update', once = false) {
         if (!owner || !key || !subscriber) {
-            throw new LibraryError('can\'t subscribe variable without owner, key or callback function.');
+            throw new LibraryError('subscribe: can\'t subscribe variable without owner, key or callback function.');
         }
         let uid = this.utils.createKeyUID(owner, key);
         let availableEvents = ['will-change', 'update'];
@@ -205,10 +211,14 @@ class Baxter {
 
     /**
      * @name Baxter.resolve
-     * @param {Set} dependencies
+     * @param {Set|Array} dependencies
      * @returns {Promise}
      */
     resolve(dependencies) {
+        if (!(Symbol.iterator in dependencies)) {
+            throw new LibraryError('resolve: dependencies are not iterable.');
+        }
+
         let result = new Set();
 
         for (let dependency of dependencies) {
@@ -220,19 +230,22 @@ class Baxter {
 
     /**
      * @name Baxter.getDependencies
+     * @param {Object} context
      * @param {Function} computed
      * @param {Function} callback
-     * @returns {Promise}
+     * @returns {*} Result of computing
      */
-    getDependencies(computed, callback) {
+    getDependencies(context, computed, callback) {
+        if (!context || !computed || !callback) {
+            throw new LibraryError('getDependencies: there is no context, computed function or callback.');
+        }
+
         let listener = this.subscribeEvent('get', callback);
-        let computingResult = computed();
+        let computingResult = computed.call(context);
 
         listener.dispose();
 
-        return new Promise((resolve) => {
-            resolve(computingResult);
-        }).then((result) => result);
+        return computingResult;
     }
 
     /**
@@ -267,12 +280,25 @@ class Baxter {
      * @name Baxter.observable
      * @param {Object} owner
      * @param {String} key
-     * @param {*} initialValue
+     * @param {*} [initialValue]
      * @returns {*} value
      */
     observable(owner, key, initialValue) {
+        if (typeof owner !== 'object') {
+            throw new LibraryError('observable: owner object in not defined.');
+        }
+        if (typeof key !== 'string') {
+            throw new LibraryError('observable: key string in not defined.');
+        }
+
         let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
+
+        if (this.variables.has(uid)) {
+            return initialValue;
+        }
+
+        this.variables.set(uid, new Set());
 
         Object.defineProperty(owner, key,
             {
@@ -325,6 +351,18 @@ class Baxter {
      * @returns {*}
      */
     computed(owner, key, computedObservable, userDependencies) {
+        if (typeof owner !== 'object') {
+            throw new LibraryError('computed: owner object in not defined.');
+        }
+
+        if (typeof key !== 'string') {
+            throw new LibraryError('computed: key string in not defined.');
+        }
+
+        if (typeof computedObservable !== 'function') {
+            throw new LibraryError('computed: computedObservable function in not defined.');
+        }
+
         let value;
         let oldValue;
         let isComputing = false;
@@ -332,6 +370,10 @@ class Baxter {
         let canUpdate = false;
         let dependencies = new Set();
         let handlers = new Set();
+
+        if (this.variables.has(computedUID)) {
+            return computedObservable;
+        }
 
         this.variables.set(computedUID, handlers);
 
@@ -369,11 +411,7 @@ class Baxter {
         });
 
         let handleObservable = (handledValue) => {
-            if (handledValue.uid === computedUID) {
-                throw new LibraryError('Circular dependencies detected on ' + key + ' value.');
-            }
-
-            dependencies.add(this.utils.createKeyUID(handledValue.owner, handledValue.key));
+            dependencies.add(handledValue.uid);
 
             let subscriber = this.subscribe(handledValue.owner, handledValue.key, () => {
                 if (isComputing) {
@@ -410,16 +448,21 @@ class Baxter {
             }
         }
 
-        this.getDependencies(computedObservable, handleObservable)
-            .then((resolvedValue) => {
+        let calculatedValue = this.getDependencies(owner, computedObservable, handleObservable);
+        if (calculatedValue instanceof Promise) {
+            calculatedValue.then((result) => {
                 this.addToStack(owner, key, () => {
                     return this.resolve(dependencies)
                         .then(() => {
                             canUpdate = true;
-                            owner[key] = resolvedValue;
+                            owner[key] = result;
                         });
                 });
             });
+        } else {
+            canUpdate = true;
+            owner[key] = calculatedValue;
+        }
 
         return value;
     }
@@ -429,6 +472,10 @@ class Baxter {
      * @param {Object} object
      */
     watch(object) {
+        if (typeof object !== 'object') {
+            throw new LibraryError('watch: object is not defined.');
+        }
+
         for (let key in object) {
             if (!object.hasOwnProperty(key)) {
                 continue;
