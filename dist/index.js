@@ -509,18 +509,22 @@
 	                        return false;
 	                    }
 
-	                    _this4.addToStack(owner, key, function () {
-	                        var oldValue = value;
+	                    var oldValue = value;
 
-	                        value = newValue;
+	                    _this4.postEvent('will-change', {
+	                        uid: uid,
+	                        owner: owner,
+	                        key: key
+	                    });
 
-	                        _this4.postEvent('update', {
-	                            uid: uid,
-	                            owner: owner,
-	                            key: key,
-	                            value: value,
-	                            oldValue: oldValue
-	                        });
+	                    value = newValue;
+
+	                    _this4.postEvent('update', {
+	                        uid: uid,
+	                        owner: owner,
+	                        key: key,
+	                        value: value,
+	                        oldValue: oldValue
 	                    });
 	                },
 

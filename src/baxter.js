@@ -308,21 +308,25 @@ class Baxter {
                         return false;
                     }
 
-                    this.addToStack(owner, key, () => {
-                        let oldValue = value;
+                    let oldValue = value;
 
-                        value = newValue;
-
-                        this.postEvent('update',
-                            {
-                                uid: uid,
-                                owner: owner,
-                                key: key,
-                                value: value,
-                                oldValue: oldValue
-                            }
-                        );
+                    this.postEvent('will-change', {
+                        uid: uid,
+                        owner: owner,
+                        key: key
                     });
+
+                    value = newValue;
+
+                    this.postEvent('update',
+                        {
+                            uid: uid,
+                            owner: owner,
+                            key: key,
+                            value: value,
+                            oldValue: oldValue
+                        }
+                    );
                 },
 
                 get: () => {
