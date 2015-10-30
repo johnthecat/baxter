@@ -3,6 +3,10 @@ Baxter
 
 ### Reactive data updating with minimal additional layer
 
+## Overview
+
+Baxter creates reactive bindings without wrapping into functions.
+
 ## Features
 
 * **Using ES6** - Library written in ES6 and compiled into ES5 by Babel. If you are using ES6 in your project - include library src and compile it with your bundle.
@@ -12,9 +16,14 @@ Baxter
 * **Correct async resolving** - If computed variable returns Promise, then field equals async call result, and all dependencies will wait until Promise get resolved.
 * **Really lightweight code** - Minified baxter size is only 9kb!
 
-## About
+## Install
 
-Baxter creates reactive bindings without wrapping into functions.
+Bower: 
+```
+bower install baxter --save
+```
+
+## Examples
 
 Classic example:
 
