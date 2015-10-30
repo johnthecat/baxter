@@ -16,6 +16,13 @@ Baxter creates reactive bindings without wrapping into functions.
 * **Correct async resolving** - If computed variable returns Promise, then field equals async call result, and all dependencies will wait until Promise get resolved.
 * **Really lightweight code** - Minified baxter size is only 9kb!
 
+## Install
+
+Bower: 
+```
+bower install baxter --save
+```
+
 ## Examples
 
 Classic example:
