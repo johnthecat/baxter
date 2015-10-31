@@ -1,5 +1,5 @@
 import EventService from './services/event';
-import LibraryError from './entities/error';
+import BaxterError from './entities/error';
 
 /**
  * @class Baxter
@@ -14,16 +14,16 @@ class Baxter {
         let UID = 1;
 
         /**
-         * @name Baxter.callstack
+         * @name Baxter._callstack
          * @type {Map}
          */
-        this.callstack = new Map();
+        this._callstack = new Map();
 
         /**
-         * @name Baxter.variables
+         * @name Baxter._variables
          * @type {Map}
          */
-        this.variables = new Map();
+        this._variables = new Map();
 
         /**
          * @name Baxter.eventStream
@@ -95,50 +95,11 @@ class Baxter {
             }
         };
 
+        this._watchers = {
+
+        };
+
         this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 0));
-    }
-
-    /**
-     * @name Baxter.dispose
-     * @param {Object} owner
-     * @param {String} [key]
-     */
-    dispose(owner, key) {
-        if (typeof owner !== 'object') {
-            throw new LibraryError('Dispose: object is not defined.');
-        }
-
-        if (!key) {
-            for (let field of (Object.keys(owner))) {
-                let uid = this.utils.createKeyUID(owner, field);
-                let handlers = this.variables.get(uid);
-
-                if (!handlers) {
-                    continue;
-                }
-
-                for (let handler of handlers) {
-                    handler.dispose();
-                    delete owner[field];
-                }
-
-                this.variables.delete(uid);
-            }
-        } else {
-            let uid = this.utils.createKeyUID(owner, key);
-            let handlers = this.variables.get(uid);
-
-            if (!handlers) {
-                return;
-            }
-
-            for (let handler of handlers) {
-                handler.dispose();
-                delete owner[key];
-            }
-
-            this.variables.delete(uid);
-        }
     }
 
     /**
@@ -149,11 +110,11 @@ class Baxter {
      */
     subscribeEvent(eventType, subscriber, once = false) {
         if (typeof eventType !== 'string') {
-            throw new LibraryError('subscribeEvent: eventType is not defined.');
+            throw new BaxterError('subscribeEvent: eventType is not defined.');
         }
 
         if (typeof subscriber !== 'function') {
-            throw new LibraryError('subscribeEvent: subscriber function is not defined.');
+            throw new BaxterError('subscribeEvent: subscriber function is not defined.');
         }
 
         if (once) {
@@ -174,7 +135,7 @@ class Baxter {
      */
     postEvent(eventType, data) {
         if (typeof eventType !== 'string') {
-            throw new LibraryError('postEvent: eventType is not defined.');
+            throw new BaxterError('postEvent: eventType is not defined.');
         }
 
         this.eventStream.post(eventType, data);
@@ -187,11 +148,11 @@ class Baxter {
      * @param {Function} subscriber
      * @param {String} [eventType]
      * @param {Boolean} [once]
-     * @throws {LibraryError}
+     * @throws {BaxterError}
      */
     subscribe(owner, key, subscriber, eventType = 'update', once = false) {
         if (!owner || !key || !subscriber) {
-            throw new LibraryError('subscribe: can\'t subscribe variable without owner, key or callback function.');
+            throw new BaxterError('subscribe: can\'t subscribe variable without owner, key or callback function.');
         }
         let uid = this.utils.createKeyUID(owner, key);
         let availableEvents = ['will-change', 'update'];
@@ -203,7 +164,7 @@ class Baxter {
         };
 
         if (!eventToListen) {
-            throw new LibraryError('subscribe: listening ' + eventType + ' event is not accepted.');
+            throw new BaxterError('subscribe: listening ' + eventType + ' event is not accepted.');
         }
 
         return this.subscribeEvent(eventToListen, eventHandler, once);
@@ -216,13 +177,13 @@ class Baxter {
      */
     resolve(dependencies) {
         if (!(Symbol.iterator in dependencies)) {
-            throw new LibraryError('resolve: dependencies are not iterable.');
+            throw new BaxterError('resolve: dependencies are not iterable.');
         }
 
         let result = new Set();
 
         for (let dependency of dependencies) {
-            result.add(this.callstack.get(dependency));
+            result.add(this._callstack.get(dependency));
         }
 
         return Promise.all(result);
@@ -237,7 +198,7 @@ class Baxter {
      */
     getDependencies(context, computed, callback) {
         if (!context || !computed || !callback) {
-            throw new LibraryError('getDependencies: there is no context, computed function or callback.');
+            throw new BaxterError('getDependencies: there is no context, computed function or callback.');
         }
 
         let listener = this.subscribeEvent('get', callback);
@@ -263,14 +224,14 @@ class Baxter {
             key: key
         });
 
-        this.callstack.set(uid, new Promise((resolve) => {
+        this._callstack.set(uid, new Promise((resolve) => {
             this.subscribeEvent('will-change-all', () => {
                 resolve(callback());
             }, true);
         })
             .then(() => {
-                this.callstack.delete(uid);
-                if (!this.callstack.size) {
+                this._callstack.delete(uid);
+                if (!this._callstack.size) {
                     this.postEvent('change-complete');
                 }
             }));
@@ -285,20 +246,20 @@ class Baxter {
      */
     variable(owner, key, initialValue) {
         if (typeof owner !== 'object') {
-            throw new LibraryError('variable: owner object in not defined.');
+            throw new BaxterError('variable: owner object in not defined.');
         }
         if (typeof key !== 'string') {
-            throw new LibraryError('variable: key string in not defined.');
+            throw new BaxterError('variable: key string in not defined.');
         }
 
         let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
 
-        if (this.variables.has(uid)) {
+        if (this._variables.has(uid)) {
             return initialValue;
         }
 
-        this.variables.set(uid, new Set());
+        this._variables.set(uid, new Set());
 
         Object.defineProperty(owner, key,
             {
@@ -356,15 +317,15 @@ class Baxter {
      */
     computed(owner, key, computedObservable, userDependencies) {
         if (typeof owner !== 'object') {
-            throw new LibraryError('computed: owner object in not defined.');
+            throw new BaxterError('computed: owner object in not defined.');
         }
 
         if (typeof key !== 'string') {
-            throw new LibraryError('computed: key string in not defined.');
+            throw new BaxterError('computed: key string in not defined.');
         }
 
         if (typeof computedObservable !== 'function') {
-            throw new LibraryError('computed: computedObservable function in not defined.');
+            throw new BaxterError('computed: computedObservable function in not defined.');
         }
 
         let value;
@@ -375,11 +336,11 @@ class Baxter {
         let dependencies = new Set();
         let handlers = new Set();
 
-        if (this.variables.has(computedUID)) {
+        if (this._variables.has(computedUID)) {
             return computedObservable;
         }
 
-        this.variables.set(computedUID, handlers);
+        this._variables.set(computedUID, handlers);
 
         Object.defineProperty(owner, key, {
             configurable: true,
@@ -394,10 +355,10 @@ class Baxter {
                 return value;
             },
             set: (computedValue) => {
-                if (!canUpdate) {
-                    throw new LibraryError('you can\'t set value to computed');
+                if (!isComputing) {
+                    throw new BaxterError('you can\'t set value to computed');
                 }
-                canUpdate = false;
+                isComputing = false;
                 value = computedValue;
 
                 if (value === oldValue) {
@@ -422,6 +383,8 @@ class Baxter {
                     return false;
                 }
 
+                isComputing = true;
+
                 this.addToStack(owner, key, () => {
                     return this.resolve(dependencies)
                         .then(() => {
@@ -429,18 +392,12 @@ class Baxter {
                             return computedObservable.call(owner);
                         })
                         .then((value) => {
-                            isComputing = false;
-                            canUpdate = true;
                             owner[key] = value;
                         })
                         .catch(() => {
-                            isComputing = false;
-                            canUpdate = true;
                             owner[key] = undefined;
                         });
                 });
-
-                isComputing = true;
             }, 'will-change');
 
             handlers.add(subscriber);
@@ -458,13 +415,13 @@ class Baxter {
                 this.addToStack(owner, key, () => {
                     return this.resolve(dependencies)
                         .then(() => {
-                            canUpdate = true;
+                            isComputing = true;
                             owner[key] = result;
                         });
                 });
             });
         } else {
-            canUpdate = true;
+            isComputing = true;
             owner[key] = calculatedValue;
         }
 
@@ -477,7 +434,7 @@ class Baxter {
      */
     watch(object) {
         if (typeof object !== 'object') {
-            throw new LibraryError('watch: object is not defined.');
+            throw new BaxterError('watch: object is not defined.');
         }
 
         let computedVariables = [];
@@ -505,6 +462,49 @@ class Baxter {
         }
 
         return object;
+    }
+
+    /**
+     * @name Baxter.dispose
+     * @param {Object} owner
+     * @param {String} [key]
+     */
+    dispose(owner, key) {
+        if (typeof owner !== 'object') {
+            throw new BaxterError('Dispose: object is not defined.');
+        }
+
+        if (!key) {
+            for (let field of (Object.keys(owner))) {
+                let uid = this.utils.createKeyUID(owner, field);
+                let handlers = this._variables.get(uid);
+
+                if (!handlers) {
+                    continue;
+                }
+
+                for (let handler of handlers) {
+                    handler.dispose();
+                    delete owner[field];
+                }
+
+                this._variables.delete(uid);
+            }
+        } else {
+            let uid = this.utils.createKeyUID(owner, key);
+            let handlers = this._variables.get(uid);
+
+            if (!handlers) {
+                return;
+            }
+
+            for (let handler of handlers) {
+                handler.dispose();
+                delete owner[key];
+            }
+
+            this._variables.delete(uid);
+        }
     }
 }
 

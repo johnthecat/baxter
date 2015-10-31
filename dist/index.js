@@ -101,16 +101,16 @@
 	        var UID = 1;
 
 	        /**
-	         * @name Baxter.callstack
+	         * @name Baxter._callstack
 	         * @type {Map}
 	         */
-	        this.callstack = new Map();
+	        this._callstack = new Map();
 
 	        /**
-	         * @name Baxter.variables
+	         * @name Baxter._variables
 	         * @type {Map}
 	         */
-	        this.variables = new Map();
+	        this._variables = new Map();
 
 	        /**
 	         * @name Baxter.eventStream
@@ -182,127 +182,21 @@
 	            }
 	        };
 
+	        this._watchers = {};
+
 	        this.subscribeEvent('will-change', this.utils.debounce(function () {
 	            return _this.postEvent('will-change-all');
 	        }, 0));
 	    }
 
 	    /**
-	     * @name Baxter.dispose
-	     * @param {Object} owner
-	     * @param {String} [key]
+	     * @name Baxter.subscribeEvent
+	     * @param {String} eventType
+	     * @param {Function} subscriber
+	     * @param {Boolean} [once]
 	     */
 
 	    _createClass(Baxter, [{
-	        key: 'dispose',
-	        value: function dispose(owner, key) {
-	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('Dispose: object is not defined.');
-	            }
-
-	            if (!key) {
-	                var _iteratorNormalCompletion = true;
-	                var _didIteratorError = false;
-	                var _iteratorError = undefined;
-
-	                try {
-	                    for (var _iterator = Object.keys(owner)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	                        var field = _step.value;
-
-	                        var uid = this.utils.createKeyUID(owner, field);
-	                        var handlers = this.variables.get(uid);
-
-	                        if (!handlers) {
-	                            continue;
-	                        }
-
-	                        var _iteratorNormalCompletion2 = true;
-	                        var _didIteratorError2 = false;
-	                        var _iteratorError2 = undefined;
-
-	                        try {
-	                            for (var _iterator2 = handlers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	                                var handler = _step2.value;
-
-	                                handler.dispose();
-	                                delete owner[field];
-	                            }
-	                        } catch (err) {
-	                            _didIteratorError2 = true;
-	                            _iteratorError2 = err;
-	                        } finally {
-	                            try {
-	                                if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-	                                    _iterator2['return']();
-	                                }
-	                            } finally {
-	                                if (_didIteratorError2) {
-	                                    throw _iteratorError2;
-	                                }
-	                            }
-	                        }
-
-	                        this.variables['delete'](uid);
-	                    }
-	                } catch (err) {
-	                    _didIteratorError = true;
-	                    _iteratorError = err;
-	                } finally {
-	                    try {
-	                        if (!_iteratorNormalCompletion && _iterator['return']) {
-	                            _iterator['return']();
-	                        }
-	                    } finally {
-	                        if (_didIteratorError) {
-	                            throw _iteratorError;
-	                        }
-	                    }
-	                }
-	            } else {
-	                var uid = this.utils.createKeyUID(owner, key);
-	                var handlers = this.variables.get(uid);
-
-	                if (!handlers) {
-	                    return;
-	                }
-
-	                var _iteratorNormalCompletion3 = true;
-	                var _didIteratorError3 = false;
-	                var _iteratorError3 = undefined;
-
-	                try {
-	                    for (var _iterator3 = handlers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	                        var handler = _step3.value;
-
-	                        handler.dispose();
-	                        delete owner[key];
-	                    }
-	                } catch (err) {
-	                    _didIteratorError3 = true;
-	                    _iteratorError3 = err;
-	                } finally {
-	                    try {
-	                        if (!_iteratorNormalCompletion3 && _iterator3['return']) {
-	                            _iterator3['return']();
-	                        }
-	                    } finally {
-	                        if (_didIteratorError3) {
-	                            throw _iteratorError3;
-	                        }
-	                    }
-	                }
-
-	                this.variables['delete'](uid);
-	            }
-	        }
-
-	        /**
-	         * @name Baxter.subscribeEvent
-	         * @param {String} eventType
-	         * @param {Function} subscriber
-	         * @param {Boolean} [once]
-	         */
-	    }, {
 	        key: 'subscribeEvent',
 	        value: function subscribeEvent(eventType, subscriber) {
 	            var _this2 = this;
@@ -352,7 +246,7 @@
 	         * @param {Function} subscriber
 	         * @param {String} [eventType]
 	         * @param {Boolean} [once]
-	         * @throws {LibraryError}
+	         * @throws {BaxterError}
 	         */
 	    }, {
 	        key: 'subscribe',
@@ -393,27 +287,27 @@
 
 	            var result = new Set();
 
-	            var _iteratorNormalCompletion4 = true;
-	            var _didIteratorError4 = false;
-	            var _iteratorError4 = undefined;
+	            var _iteratorNormalCompletion = true;
+	            var _didIteratorError = false;
+	            var _iteratorError = undefined;
 
 	            try {
-	                for (var _iterator4 = dependencies[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	                    var dependency = _step4.value;
+	                for (var _iterator = dependencies[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	                    var dependency = _step.value;
 
-	                    result.add(this.callstack.get(dependency));
+	                    result.add(this._callstack.get(dependency));
 	                }
 	            } catch (err) {
-	                _didIteratorError4 = true;
-	                _iteratorError4 = err;
+	                _didIteratorError = true;
+	                _iteratorError = err;
 	            } finally {
 	                try {
-	                    if (!_iteratorNormalCompletion4 && _iterator4['return']) {
-	                        _iterator4['return']();
+	                    if (!_iteratorNormalCompletion && _iterator['return']) {
+	                        _iterator['return']();
 	                    }
 	                } finally {
-	                    if (_didIteratorError4) {
-	                        throw _iteratorError4;
+	                    if (_didIteratorError) {
+	                        throw _iteratorError;
 	                    }
 	                }
 	            }
@@ -462,13 +356,13 @@
 	                key: key
 	            });
 
-	            this.callstack.set(uid, new Promise(function (resolve) {
+	            this._callstack.set(uid, new Promise(function (resolve) {
 	                _this3.subscribeEvent('will-change-all', function () {
 	                    resolve(callback());
 	                }, true);
 	            }).then(function () {
-	                _this3.callstack['delete'](uid);
-	                if (!_this3.callstack.size) {
+	                _this3._callstack['delete'](uid);
+	                if (!_this3._callstack.size) {
 	                    _this3.postEvent('change-complete');
 	                }
 	            }));
@@ -496,11 +390,11 @@
 	            var value = initialValue;
 	            var uid = this.utils.createKeyUID(owner, key);
 
-	            if (this.variables.has(uid)) {
+	            if (this._variables.has(uid)) {
 	                return initialValue;
 	            }
 
-	            this.variables.set(uid, new Set());
+	            this._variables.set(uid, new Set());
 
 	            Object.defineProperty(owner, key, {
 	                configurable: true,
@@ -575,11 +469,11 @@
 	            var dependencies = new Set();
 	            var handlers = new Set();
 
-	            if (this.variables.has(computedUID)) {
+	            if (this._variables.has(computedUID)) {
 	                return computedObservable;
 	            }
 
-	            this.variables.set(computedUID, handlers);
+	            this._variables.set(computedUID, handlers);
 
 	            Object.defineProperty(owner, key, {
 	                configurable: true,
@@ -594,10 +488,10 @@
 	                    return value;
 	                },
 	                set: function set(computedValue) {
-	                    if (!canUpdate) {
+	                    if (!isComputing) {
 	                        throw new _entitiesError2['default']('you can\'t set value to computed');
 	                    }
-	                    canUpdate = false;
+	                    isComputing = false;
 	                    value = computedValue;
 
 	                    if (value === oldValue) {
@@ -622,49 +516,45 @@
 	                        return false;
 	                    }
 
+	                    isComputing = true;
+
 	                    _this5.addToStack(owner, key, function () {
 	                        return _this5.resolve(dependencies).then(function () {
 	                            oldValue = value;
 	                            return computedObservable.call(owner);
 	                        }).then(function (value) {
-	                            isComputing = false;
-	                            canUpdate = true;
 	                            owner[key] = value;
 	                        })['catch'](function () {
-	                            isComputing = false;
-	                            canUpdate = true;
 	                            owner[key] = undefined;
 	                        });
 	                    });
-
-	                    isComputing = true;
 	                }, 'will-change');
 
 	                handlers.add(subscriber);
 	            };
 
 	            if (Symbol.iterator in Object(userDependencies)) {
-	                var _iteratorNormalCompletion5 = true;
-	                var _didIteratorError5 = false;
-	                var _iteratorError5 = undefined;
+	                var _iteratorNormalCompletion2 = true;
+	                var _didIteratorError2 = false;
+	                var _iteratorError2 = undefined;
 
 	                try {
-	                    for (var _iterator5 = userDependencies[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	                        var userDependency = _step5.value;
+	                    for (var _iterator2 = userDependencies[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	                        var userDependency = _step2.value;
 
 	                        handleObservable(userDependency);
 	                    }
 	                } catch (err) {
-	                    _didIteratorError5 = true;
-	                    _iteratorError5 = err;
+	                    _didIteratorError2 = true;
+	                    _iteratorError2 = err;
 	                } finally {
 	                    try {
-	                        if (!_iteratorNormalCompletion5 && _iterator5['return']) {
-	                            _iterator5['return']();
+	                        if (!_iteratorNormalCompletion2 && _iterator2['return']) {
+	                            _iterator2['return']();
 	                        }
 	                    } finally {
-	                        if (_didIteratorError5) {
-	                            throw _iteratorError5;
+	                        if (_didIteratorError2) {
+	                            throw _iteratorError2;
 	                        }
 	                    }
 	                }
@@ -675,13 +565,13 @@
 	                calculatedValue.then(function (result) {
 	                    _this5.addToStack(owner, key, function () {
 	                        return _this5.resolve(dependencies).then(function () {
-	                            canUpdate = true;
+	                            isComputing = true;
 	                            owner[key] = result;
 	                        });
 	                    });
 	                });
 	            } else {
-	                canUpdate = true;
+	                isComputing = true;
 	                owner[key] = calculatedValue;
 	            }
 
@@ -724,6 +614,114 @@
 	            }
 
 	            return object;
+	        }
+
+	        /**
+	         * @name Baxter.dispose
+	         * @param {Object} owner
+	         * @param {String} [key]
+	         */
+	    }, {
+	        key: 'dispose',
+	        value: function dispose(owner, key) {
+	            if (typeof owner !== 'object') {
+	                throw new _entitiesError2['default']('Dispose: object is not defined.');
+	            }
+
+	            if (!key) {
+	                var _iteratorNormalCompletion3 = true;
+	                var _didIteratorError3 = false;
+	                var _iteratorError3 = undefined;
+
+	                try {
+	                    for (var _iterator3 = Object.keys(owner)[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	                        var field = _step3.value;
+
+	                        var uid = this.utils.createKeyUID(owner, field);
+	                        var handlers = this._variables.get(uid);
+
+	                        if (!handlers) {
+	                            continue;
+	                        }
+
+	                        var _iteratorNormalCompletion4 = true;
+	                        var _didIteratorError4 = false;
+	                        var _iteratorError4 = undefined;
+
+	                        try {
+	                            for (var _iterator4 = handlers[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+	                                var handler = _step4.value;
+
+	                                handler.dispose();
+	                                delete owner[field];
+	                            }
+	                        } catch (err) {
+	                            _didIteratorError4 = true;
+	                            _iteratorError4 = err;
+	                        } finally {
+	                            try {
+	                                if (!_iteratorNormalCompletion4 && _iterator4['return']) {
+	                                    _iterator4['return']();
+	                                }
+	                            } finally {
+	                                if (_didIteratorError4) {
+	                                    throw _iteratorError4;
+	                                }
+	                            }
+	                        }
+
+	                        this._variables['delete'](uid);
+	                    }
+	                } catch (err) {
+	                    _didIteratorError3 = true;
+	                    _iteratorError3 = err;
+	                } finally {
+	                    try {
+	                        if (!_iteratorNormalCompletion3 && _iterator3['return']) {
+	                            _iterator3['return']();
+	                        }
+	                    } finally {
+	                        if (_didIteratorError3) {
+	                            throw _iteratorError3;
+	                        }
+	                    }
+	                }
+	            } else {
+	                var uid = this.utils.createKeyUID(owner, key);
+	                var handlers = this._variables.get(uid);
+
+	                if (!handlers) {
+	                    return;
+	                }
+
+	                var _iteratorNormalCompletion5 = true;
+	                var _didIteratorError5 = false;
+	                var _iteratorError5 = undefined;
+
+	                try {
+	                    for (var _iterator5 = handlers[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+	                        var handler = _step5.value;
+
+	                        handler.dispose();
+	                        delete owner[key];
+	                    }
+	                } catch (err) {
+	                    _didIteratorError5 = true;
+	                    _iteratorError5 = err;
+	                } finally {
+	                    try {
+	                        if (!_iteratorNormalCompletion5 && _iterator5['return']) {
+	                            _iterator5['return']();
+	                        }
+	                    } finally {
+	                        if (_didIteratorError5) {
+	                            throw _iteratorError5;
+	                        }
+	                    }
+	                }
+
+	                this._variables['delete'](uid);
+	            }
 	        }
 	    }]);
 
@@ -909,24 +907,24 @@
 	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 	/**
-	 * @name LibraryError
+	 * @name BaxterError
 	 */
 
-	var LibraryError = (function (_Error) {
-	    _inherits(LibraryError, _Error);
+	var BaxterError = (function (_Error) {
+	    _inherits(BaxterError, _Error);
 
-	    function LibraryError(message) {
-	        _classCallCheck(this, LibraryError);
+	    function BaxterError(message) {
+	        _classCallCheck(this, BaxterError);
 
-	        _get(Object.getPrototypeOf(LibraryError.prototype), 'constructor', this).call(this);
+	        _get(Object.getPrototypeOf(BaxterError.prototype), 'constructor', this).call(this);
 
-	        this.message = '[Twin.js]: ' + message;
+	        this.message = '[Baxter.js]: ' + message;
 	    }
 
-	    return LibraryError;
+	    return BaxterError;
 	})(Error);
 
-	exports['default'] = LibraryError;
+	exports['default'] = BaxterError;
 	module.exports = exports['default'];
 
 /***/ }
