@@ -277,18 +277,18 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.observable
+     * @name Baxter.variable
      * @param {Object} owner
      * @param {String} key
      * @param {*} [initialValue]
      * @returns {*} value
      */
-    observable(owner, key, initialValue) {
+    variable(owner, key, initialValue) {
         if (typeof owner !== 'object') {
-            throw new LibraryError('observable: owner object in not defined.');
+            throw new LibraryError('variable: owner object in not defined.');
         }
         if (typeof key !== 'string') {
-            throw new LibraryError('observable: key string in not defined.');
+            throw new LibraryError('variable: key string in not defined.');
         }
 
         let value = initialValue;
@@ -495,7 +495,7 @@ class Baxter {
                     value: value
                 });
             } else {
-                this.observable(object, key, value);
+                this.variable(object, key, value);
             }
         }
 

@@ -475,22 +475,22 @@
 	        }
 
 	        /**
-	         * @name Baxter.observable
+	         * @name Baxter.variable
 	         * @param {Object} owner
 	         * @param {String} key
 	         * @param {*} [initialValue]
 	         * @returns {*} value
 	         */
 	    }, {
-	        key: 'observable',
-	        value: function observable(owner, key, initialValue) {
+	        key: 'variable',
+	        value: function variable(owner, key, initialValue) {
 	            var _this4 = this;
 
 	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('observable: owner object in not defined.');
+	                throw new _entitiesError2['default']('variable: owner object in not defined.');
 	            }
 	            if (typeof key !== 'string') {
-	                throw new _entitiesError2['default']('observable: key string in not defined.');
+	                throw new _entitiesError2['default']('variable: key string in not defined.');
 	            }
 
 	            var value = initialValue;
@@ -714,7 +714,7 @@
 	                        value: value
 	                    });
 	                } else {
-	                    this.observable(object, key, value);
+	                    this.variable(object, key, value);
 	                }
 	            }
 
