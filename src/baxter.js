@@ -330,7 +330,7 @@ class Baxter {
      * @param {Object} owner
      * @param {String} key
      * @param {*} [initialValue]
-     * @returns {*} value
+     * @returns {*} initialValue
      */
     variable(owner, key, initialValue) {
         if (typeof owner !== 'object') {
@@ -396,22 +396,22 @@ class Baxter {
             throw new BaxterError('computed: computedObservable function in not defined.');
         }
 
-        let value;
-        let oldValue;
+        if (this._variables.has(uid)) {
+            return computedObservable;
+        }
+
+        let latestValue;
+        let previousValue;
         let isComputing = false;
         let dependencies = new Set();
         let handlers = new Set();
         let uid = this.utils.createKeyUID(owner, key);
         let utils = {
-            getValue: () => value,
-            setValue: (newValue) => value = newValue,
+            getValue: () => latestValue,
+            setValue: (newValue) => latestValue = newValue,
             setIsComputing: (value) => isComputing = value,
             isComputing: () => isComputing
         };
-
-        if (this._variables.has(uid)) {
-            return computedObservable;
-        }
 
         this._variables.set(uid, handlers);
 
@@ -447,7 +447,7 @@ class Baxter {
                 this.addToStack(owner, key, () => {
                     return this.resolve(dependencies)
                         .then(() => {
-                            oldValue = value;
+                            previousValue = latestValue;
                             return computedObservable.call(owner);
                         })
                         .then((value) => {
@@ -484,7 +484,7 @@ class Baxter {
             owner[key] = calculatedValue;
         }
 
-        return value;
+        return latestValue;
     }
 
     /**
@@ -515,7 +515,7 @@ class Baxter {
             }
         }
 
-        for (let index = 0; index < computedVariables.length; index++) {
+        for (let index = 0, computedLength = computedVariables.length; index < computedLength; index++) {
             let computed = computedVariables[index];
             this.computed(computed.owner, computed.key, computed.value);
         }

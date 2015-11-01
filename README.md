@@ -14,11 +14,12 @@ Baxter creates reactive bindings without wrapping into functions.
 * **Dependency resolving** - Don't care about multiple recalculating of computed variable - Baxter tracks all dependencies and refreshes value only then it should.
 * **Event driven architecture** - No dirty checking, no extra work when idle, Baxter works only when you really need it. You can easily listen events from Baxter and provide your own logic.
 * **Correct async resolving** - If computed variable returns Promise, then field equals async call result, and all dependencies will wait until Promise get resolved.
-* **Really lightweight code** - Minified baxter size is only 9kb!
+* **Well optimized** - Each method is tested on performance.
+* **Tiny weight** - Minified baxter size is only 10.5kb.
 
 ## Install
 
-Bower: 
+Bower:
 ```
 bower install baxter --save
 ```
@@ -41,11 +42,11 @@ Classic example:
  let user = new User();
  /**
   * {
-  *      surname: 'Dorian',
-  *      name: 'John',
-  *      age: '30',
-  *      fullName: 'Dorian John',
-  *      title: 'Dorian John (30)',
+  *    surname: 'Dorian',
+  *    name: 'John',
+  *    age: '30',
+  *    fullName: 'Dorian John',
+  *    title: 'Dorian John (30)',
   * }
   */
 ```
@@ -56,12 +57,12 @@ That's great, by this data is not reactive. Now let's try this:
  class ReactiveUser {
    constructor() {
      this.surname = 'Dorian';
-       this.name = 'John';
-       this.age = 30;
-       this.fullName = () => this.surname + ' ' + this.name;
-       this.title = () => this.fullName + ' (' + this.age + ')';
-       
-       baxter.watch(this);
+     this.name = 'John';
+     this.age = 30;
+     this.fullName = () => this.surname + ' ' + this.name;
+     this.title = () => this.fullName + ' (' + this.age + ')';
+
+     baxter.watch(this);
  }
 
  let reactiveUser = new ReactiveUser();
@@ -117,7 +118,7 @@ or
       this.name = 'name';
       this.surname = 'surname';
       this.fullName = () => this.name + ' ' + this.surname;
-      
+
       baxter.watch(this); //You can call watch inside constructor
     }
   }
@@ -125,7 +126,7 @@ or
   let perryCox = new Doctor('Perry', 'Cox');
 ```
 
-### baxter.observable(owner, key, initialValue)
+### baxter.variable(owner, key, initialValue)
 
 * **owner** {Object} - context, where variable defines.
 * **key** {String} - key of the variable.
