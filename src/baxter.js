@@ -340,16 +340,17 @@ class Baxter {
             throw new BaxterError('variable: key string in not defined.');
         }
 
-        let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
-        let utils = {
-            getValue: () => value,
-            setValue: (newValue) => value = newValue
-        };
 
         if (this._variables.has(uid)) {
             return initialValue;
         }
+
+        let value = initialValue;
+        let utils = {
+            getValue: () => value,
+            setValue: (newValue) => value = newValue
+        };
 
         this._variables.set(uid, new Set());
 
@@ -396,6 +397,8 @@ class Baxter {
             throw new BaxterError('computed: computedObservable function in not defined.');
         }
 
+        let uid = this.utils.createKeyUID(owner, key);
+
         if (this._variables.has(uid)) {
             return computedObservable;
         }
@@ -405,7 +408,6 @@ class Baxter {
         let isComputing = false;
         let dependencies = new Set();
         let handlers = new Set();
-        let uid = this.utils.createKeyUID(owner, key);
         let utils = {
             getValue: () => latestValue,
             setValue: (newValue) => latestValue = newValue,
