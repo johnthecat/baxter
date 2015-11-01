@@ -96,10 +96,98 @@ class Baxter {
         };
 
         this._watchers = {
+            variable: {
+                get: (config) => {
+                    let value = config.getValue();
 
+                    this.postEvent('get',
+                        {
+                            uid: config.owner,
+                            owner: config.owner,
+                            key: config.key,
+                            value: value
+                        }
+                    );
+                    return value;
+                },
+                set: (config, newValue) => {
+                    let oldValue = config.getValue();
+
+                    if (newValue === oldValue) {
+                        return false;
+                    }
+
+                    this.postEvent('will-change', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key
+                    });
+
+                    config.setValue(newValue);
+
+                    this.postEvent('update',
+                        {
+                            uid: config.uid,
+                            owner: config.owner,
+                            key: config.key,
+                            value: newValue,
+                            oldValue: oldValue
+                        }
+                    );
+                }
+            },
+            computed: {
+                get: (config) => {
+                    let value = config.getValue();
+
+                    this.postEvent('get', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key,
+                        value: value
+                    });
+
+                    return value;
+                },
+                set: (config, computedResult) => {
+                    let oldValue = config.getValue();
+
+                    if (!config.isComputing()) {
+                        throw new BaxterError('you can\'t set value to computed');
+                    }
+
+                    if (computedResult === oldValue) {
+                        return false;
+                    }
+
+                    config.setIsComputing(false);
+                    config.setValue(computedResult);
+
+
+                    this.postEvent('update', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key,
+                        value: computedResult,
+                        oldValue: oldValue
+                    });
+                }
+            }
         };
 
         this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 0));
+    }
+
+    /**
+     * @name Baxter.createClosure
+     * @param {Function} func
+     * @param {*} config
+     * @returns {Function}
+     */
+    createClosure(func, config) {
+        return (data) => {
+            return func(config, data);
+        }
     }
 
     /**
@@ -254,6 +342,10 @@ class Baxter {
 
         let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
+        let utils = {
+            getValue: () => value,
+            setValue: (newValue) => value = newValue
+        };
 
         if (this._variables.has(uid)) {
             return initialValue;
@@ -264,43 +356,19 @@ class Baxter {
         Object.defineProperty(owner, key,
             {
                 configurable: true,
-                set: (newValue) => {
-                    if (newValue === value) {
-                        return false;
-                    }
-
-                    let oldValue = value;
-
-                    this.postEvent('will-change', {
-                        uid: uid,
-                        owner: owner,
-                        key: key
-                    });
-
-                    value = newValue;
-
-                    this.postEvent('update',
-                        {
-                            uid: uid,
-                            owner: owner,
-                            key: key,
-                            value: value,
-                            oldValue: oldValue
-                        }
-                    );
-                },
-
-                get: () => {
-                    this.postEvent('get',
-                        {
-                            uid: uid,
-                            owner: owner,
-                            key: key,
-                            value: value
-                        }
-                    );
-                    return value;
-                }
+                get: this.createClosure(this._watchers.variable.get, {
+                    uid: uid,
+                    owner: owner,
+                    key: key,
+                    getValue: utils.getValue
+                }),
+                set: this.createClosure(this._watchers.variable.set, {
+                    uid: uid,
+                    owner: owner,
+                    key: key,
+                    setValue: utils.setValue,
+                    getValue: utils.getValue
+                })
             }
         );
 
@@ -331,48 +399,39 @@ class Baxter {
         let value;
         let oldValue;
         let isComputing = false;
-        let computedUID = this.utils.createKeyUID(owner, key);
-        let canUpdate = false;
         let dependencies = new Set();
         let handlers = new Set();
+        let uid = this.utils.createKeyUID(owner, key);
+        let utils = {
+            getValue: () => value,
+            setValue: (newValue) => value = newValue,
+            setIsComputing: (value) => isComputing = value,
+            isComputing: () => isComputing
+        };
 
-        if (this._variables.has(computedUID)) {
+        if (this._variables.has(uid)) {
             return computedObservable;
         }
 
-        this._variables.set(computedUID, handlers);
+        this._variables.set(uid, handlers);
 
         Object.defineProperty(owner, key, {
             configurable: true,
-            get: () => {
-                this.postEvent('get', {
-                    uid: computedUID,
-                    owner: owner,
-                    key: key,
-                    value: value
-                });
-
-                return value;
-            },
-            set: (computedValue) => {
-                if (!isComputing) {
-                    throw new BaxterError('you can\'t set value to computed');
-                }
-                isComputing = false;
-                value = computedValue;
-
-                if (value === oldValue) {
-                    return false;
-                }
-
-                this.postEvent('update', {
-                    uid: computedUID,
-                    owner: owner,
-                    key: key,
-                    value: value,
-                    oldValue: oldValue
-                });
-            }
+            get: this.createClosure(this._watchers.computed.get, {
+                uid: uid,
+                owner: owner,
+                key: key,
+                getValue: utils.getValue
+            }),
+            set: this.createClosure(this._watchers.computed.set, {
+                uid: uid,
+                owner: owner,
+                key: key,
+                setValue: utils.setValue,
+                getValue: utils.getValue,
+                isComputing: utils.isComputing,
+                setIsComputing: utils.setIsComputing
+            })
         });
 
         let handleObservable = (handledValue) => {

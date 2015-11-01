@@ -5,7 +5,7 @@ var config = require('./config');
 var path = require('path');
 var gulp = require('gulp');
 var util = require('gulp-util');
-var webpack = require('gulp-webpack');
+var webpack = require('webpack-stream');
 var minify = require('gulp-minify');
 
 var webpackConfig = {
@@ -13,12 +13,12 @@ var webpackConfig = {
         loaders: [
             {
                 test: /\.js$/,
-                loader: 'babel',
-                query: {
-                    blacklist: ['strict']
-                }
+                loader: 'babel'
             }
-        ]
+        ],
+        resolve: {
+            extensions: ['', '.js']
+        }
     },
     output: {
         filename: 'index.js'
