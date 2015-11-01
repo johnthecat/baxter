@@ -102,7 +102,7 @@ class Baxter {
 
                     this.postEvent('get',
                         {
-                            uid: config.owner,
+                            uid: config.uid,
                             owner: config.owner,
                             key: config.key,
                             value: value
