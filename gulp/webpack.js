@@ -13,7 +13,7 @@ var webpackConfig = {
         loaders: [
             {
                 test: /\.js$/,
-                loader: 'babel'
+                loader: 'babel?presets[]=es2015'
             }
         ],
         resolve: {

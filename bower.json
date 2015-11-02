@@ -1,6 +1,6 @@
 {
     "name": "baxter",
-    "version": "0.1.2",
+    "version": "0.2.0",
     "description": "Reactive binding with minimal additional layer",
     "license": "MIT",
     "homepage": "https://github.com/baxterjs/baxter",

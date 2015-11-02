@@ -63,7 +63,7 @@ class Baxter {
                     return this.utils.createObjectUID(object);
                 }
 
-                return object['__uid__']
+                return object['__uid__'];
             },
 
             /**

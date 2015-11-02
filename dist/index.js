@@ -46,11 +46,11 @@
 
 	'use strict';
 
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
 	var _baxter = __webpack_require__(1);
 
 	var _baxter2 = _interopRequireDefault(_baxter);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	(function (name, lib, browserContext) {
 	    if (browserContext) {
@@ -61,7 +61,7 @@
 	        }
 	        exports[name] = lib;
 	    }
-	})('baxter', _baxter2['default'], window);
+	})('baxter', _baxter2.default, window);
 
 /***/ },
 /* 1 */
@@ -69,23 +69,27 @@
 
 	'use strict';
 
-	Object.defineProperty(exports, '__esModule', {
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
 
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	var _event = __webpack_require__(2);
 
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	var _event2 = _interopRequireDefault(_event);
 
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	var _error = __webpack_require__(3);
 
-	var _servicesEvent = __webpack_require__(2);
+	var _error2 = _interopRequireDefault(_error);
 
-	var _servicesEvent2 = _interopRequireDefault(_servicesEvent);
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	var _entitiesError = __webpack_require__(3);
+	function _instanceof(left, right) { if (right != null && right[Symbol.hasInstance]) { return right[Symbol.hasInstance](left); } else { return left instanceof right; } }
 
-	var _entitiesError2 = _interopRequireDefault(_entitiesError);
+	function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	/**
 	 * @class Baxter
@@ -121,7 +125,7 @@
 	         * @type {EventService}
 	         * @description Provides events service
 	         */
-	        this.eventStream = new _servicesEvent2['default'](this);
+	        this.eventStream = new _event2.default(this);
 
 	        /**
 	         * @name Baxter.utils
@@ -240,7 +244,7 @@
 	                    var oldValue = config.getValue();
 
 	                    if (!config.isComputing()) {
-	                        throw new _entitiesError2['default']('you can\'t set value to computed');
+	                        throw new _error2.default('you can\'t set value to computed');
 	                    }
 
 	                    if (computedResult === oldValue) {
@@ -287,6 +291,7 @@
 	         * @param {Function} subscriber
 	         * @param {Boolean} [once]
 	         */
+
 	    }, {
 	        key: 'subscribeEvent',
 	        value: function subscribeEvent(eventType, subscriber) {
@@ -295,11 +300,11 @@
 	            var once = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
 
 	            if (typeof eventType !== 'string') {
-	                throw new _entitiesError2['default']('subscribeEvent: eventType is not defined.');
+	                throw new _error2.default('subscribeEvent: eventType is not defined.');
 	            }
 
 	            if (typeof subscriber !== 'function') {
-	                throw new _entitiesError2['default']('subscribeEvent: subscriber function is not defined.');
+	                throw new _error2.default('subscribeEvent: subscriber function is not defined.');
 	            }
 
 	            if (once) {
@@ -320,11 +325,12 @@
 	         * @param {String} eventType
 	         * @param {*} [data]
 	         */
+
 	    }, {
 	        key: 'postEvent',
 	        value: function postEvent(eventType, data) {
 	            if (typeof eventType !== 'string') {
-	                throw new _entitiesError2['default']('postEvent: eventType is not defined.');
+	                throw new _error2.default('postEvent: eventType is not defined.');
 	            }
 
 	            this.eventStream.post(eventType, data);
@@ -339,6 +345,7 @@
 	         * @param {Boolean} [once]
 	         * @throws {BaxterError}
 	         */
+
 	    }, {
 	        key: 'subscribe',
 	        value: function subscribe(owner, key, subscriber) {
@@ -346,7 +353,7 @@
 	            var once = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
 
 	            if (!owner || !key || !subscriber) {
-	                throw new _entitiesError2['default']('subscribe: can\'t subscribe variable without owner, key or callback function.');
+	                throw new _error2.default('subscribe: can\'t subscribe variable without owner, key or callback function.');
 	            }
 	            var uid = this.utils.createKeyUID(owner, key);
 	            var availableEvents = ['will-change', 'update'];
@@ -358,7 +365,7 @@
 	            };
 
 	            if (!eventToListen) {
-	                throw new _entitiesError2['default']('subscribe: listening ' + eventType + ' event is not accepted.');
+	                throw new _error2.default('subscribe: listening ' + eventType + ' event is not accepted.');
 	            }
 
 	            return this.subscribeEvent(eventToListen, eventHandler, once);
@@ -369,11 +376,12 @@
 	         * @param {Set|Array} dependencies
 	         * @returns {Promise}
 	         */
+
 	    }, {
 	        key: 'resolve',
 	        value: function resolve(dependencies) {
 	            if (!(Symbol.iterator in dependencies)) {
-	                throw new _entitiesError2['default']('resolve: dependencies are not iterable.');
+	                throw new _error2.default('resolve: dependencies are not iterable.');
 	            }
 
 	            var result = new Set();
@@ -393,8 +401,8 @@
 	                _iteratorError = err;
 	            } finally {
 	                try {
-	                    if (!_iteratorNormalCompletion && _iterator['return']) {
-	                        _iterator['return']();
+	                    if (!_iteratorNormalCompletion && _iterator.return) {
+	                        _iterator.return();
 	                    }
 	                } finally {
 	                    if (_didIteratorError) {
@@ -413,11 +421,12 @@
 	         * @param {Function} callback
 	         * @returns {*} Result of computing
 	         */
+
 	    }, {
 	        key: 'getDependencies',
 	        value: function getDependencies(context, computed, callback) {
 	            if (!context || !computed || !callback) {
-	                throw new _entitiesError2['default']('getDependencies: there is no context, computed function or callback.');
+	                throw new _error2.default('getDependencies: there is no context, computed function or callback.');
 	            }
 
 	            var listener = this.subscribeEvent('get', callback);
@@ -434,6 +443,7 @@
 	         * @param {String} key
 	         * @param {Function} callback
 	         */
+
 	    }, {
 	        key: 'addToStack',
 	        value: function addToStack(owner, key, callback) {
@@ -452,7 +462,7 @@
 	                    resolve(callback());
 	                }, true);
 	            }).then(function () {
-	                _this3._callstack['delete'](uid);
+	                _this3._callstack.delete(uid);
 	                if (!_this3._callstack.size) {
 	                    _this3.postEvent('change-complete');
 	                }
@@ -466,14 +476,15 @@
 	         * @param {*} [initialValue]
 	         * @returns {*} initialValue
 	         */
+
 	    }, {
 	        key: 'variable',
 	        value: function variable(owner, key, initialValue) {
-	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('variable: owner object in not defined.');
+	            if ((typeof owner === 'undefined' ? 'undefined' : _typeof(owner)) !== 'object') {
+	                throw new _error2.default('variable: owner object in not defined.');
 	            }
 	            if (typeof key !== 'string') {
-	                throw new _entitiesError2['default']('variable: key string in not defined.');
+	                throw new _error2.default('variable: key string in not defined.');
 	            }
 
 	            var uid = this.utils.createKeyUID(owner, key);
@@ -522,21 +533,22 @@
 	         * @param {Set|Map|Array} [userDependencies]
 	         * @returns {*}
 	         */
+
 	    }, {
 	        key: 'computed',
 	        value: function computed(owner, key, computedObservable, userDependencies) {
 	            var _this4 = this;
 
-	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('computed: owner object in not defined.');
+	            if ((typeof owner === 'undefined' ? 'undefined' : _typeof(owner)) !== 'object') {
+	                throw new _error2.default('computed: owner object in not defined.');
 	            }
 
 	            if (typeof key !== 'string') {
-	                throw new _entitiesError2['default']('computed: key string in not defined.');
+	                throw new _error2.default('computed: key string in not defined.');
 	            }
 
 	            if (typeof computedObservable !== 'function') {
-	                throw new _entitiesError2['default']('computed: computedObservable function in not defined.');
+	                throw new _error2.default('computed: computedObservable function in not defined.');
 	            }
 
 	            var uid = this.utils.createKeyUID(owner, key);
@@ -602,7 +614,7 @@
 	                            return computedObservable.call(owner);
 	                        }).then(function (value) {
 	                            owner[key] = value;
-	                        })['catch'](function () {
+	                        }).catch(function () {
 	                            owner[key] = undefined;
 	                        });
 	                    });
@@ -627,8 +639,8 @@
 	                    _iteratorError2 = err;
 	                } finally {
 	                    try {
-	                        if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-	                            _iterator2['return']();
+	                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                            _iterator2.return();
 	                        }
 	                    } finally {
 	                        if (_didIteratorError2) {
@@ -639,7 +651,7 @@
 	            }
 
 	            var calculatedValue = this.getDependencies(owner, computedObservable, handleObservable);
-	            if (calculatedValue instanceof Promise) {
+	            if (_instanceof(calculatedValue, Promise)) {
 	                calculatedValue.then(function (result) {
 	                    _this4.addToStack(owner, key, function () {
 	                        return _this4.resolve(dependencies).then(function () {
@@ -660,11 +672,12 @@
 	         * @name Baxter.watch
 	         * @param {Object} object
 	         */
+
 	    }, {
 	        key: 'watch',
 	        value: function watch(object) {
-	            if (typeof object !== 'object') {
-	                throw new _entitiesError2['default']('watch: object is not defined.');
+	            if ((typeof object === 'undefined' ? 'undefined' : _typeof(object)) !== 'object') {
+	                throw new _error2.default('watch: object is not defined.');
 	            }
 
 	            var computedVariables = [];
@@ -699,11 +712,12 @@
 	         * @param {Object} owner
 	         * @param {String} [key]
 	         */
+
 	    }, {
 	        key: 'dispose',
 	        value: function dispose(owner, key) {
-	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('Dispose: object is not defined.');
+	            if ((typeof owner === 'undefined' ? 'undefined' : _typeof(owner)) !== 'object') {
+	                throw new _error2.default('Dispose: object is not defined.');
 	            }
 
 	            if (!key) {
@@ -738,8 +752,8 @@
 	                            _iteratorError4 = err;
 	                        } finally {
 	                            try {
-	                                if (!_iteratorNormalCompletion4 && _iterator4['return']) {
-	                                    _iterator4['return']();
+	                                if (!_iteratorNormalCompletion4 && _iterator4.return) {
+	                                    _iterator4.return();
 	                                }
 	                            } finally {
 	                                if (_didIteratorError4) {
@@ -748,15 +762,15 @@
 	                            }
 	                        }
 
-	                        this._variables['delete'](uid);
+	                        this._variables.delete(uid);
 	                    }
 	                } catch (err) {
 	                    _didIteratorError3 = true;
 	                    _iteratorError3 = err;
 	                } finally {
 	                    try {
-	                        if (!_iteratorNormalCompletion3 && _iterator3['return']) {
-	                            _iterator3['return']();
+	                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	                            _iterator3.return();
 	                        }
 	                    } finally {
 	                        if (_didIteratorError3) {
@@ -788,8 +802,8 @@
 	                    _iteratorError5 = err;
 	                } finally {
 	                    try {
-	                        if (!_iteratorNormalCompletion5 && _iterator5['return']) {
-	                            _iterator5['return']();
+	                        if (!_iteratorNormalCompletion5 && _iterator5.return) {
+	                            _iterator5.return();
 	                        }
 	                    } finally {
 	                        if (_didIteratorError5) {
@@ -798,7 +812,7 @@
 	                    }
 	                }
 
-	                this._variables['delete'](uid);
+	                this._variables.delete(uid);
 	            }
 	        }
 	    }]);
@@ -806,25 +820,25 @@
 	    return Baxter;
 	})();
 
-	exports['default'] = new Baxter();
-	module.exports = exports['default'];
+	exports.default = new Baxter();
 
 /***/ },
 /* 2 */
 /***/ function(module, exports) {
 
-	/**
-	 * @class EventService
-	 */
 	"use strict";
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
 
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	/**
+	 * @class EventService
+	 */
 
 	var EventService = (function () {
 	    function EventService(defaultContext) {
@@ -864,6 +878,7 @@
 	         * @param {string} event - Event name
 	         * @param {function} handler - Callback function with data as argument
 	         */
+
 	    }, {
 	        key: "on",
 	        value: function on(event, handler) {
@@ -879,6 +894,7 @@
 	         * @param {string} event
 	         * @param {function} handler
 	         */
+
 	    }, {
 	        key: "once",
 	        value: function once(event, handler) {
@@ -902,6 +918,7 @@
 	         * @param {function} [handlerToDelete]
 	         * @returns {boolean}
 	         */
+
 	    }, {
 	        key: "off",
 	        value: function off(event, handlerToDelete) {
@@ -915,7 +932,7 @@
 
 	            var eventHandlers = this.channels[event];
 
-	            eventHandlers["delete"](handlerToDelete);
+	            eventHandlers.delete(handlerToDelete);
 
 	            if (!eventHandlers.size) {
 	                delete this.channels[event];
@@ -927,6 +944,7 @@
 	         * @param {string} event
 	         * @param {*} data
 	         */
+
 	    }, {
 	        key: "post",
 	        value: function post(event, data) {
@@ -953,8 +971,8 @@
 	                _iteratorError = err;
 	            } finally {
 	                try {
-	                    if (!_iteratorNormalCompletion && _iterator["return"]) {
-	                        _iterator["return"]();
+	                    if (!_iteratorNormalCompletion && _iterator.return) {
+	                        _iterator.return();
 	                    }
 	                } finally {
 	                    if (_didIteratorError) {
@@ -968,27 +986,27 @@
 	    return EventService;
 	})();
 
-	exports["default"] = EventService;
-	module.exports = exports["default"];
+	exports.default = EventService;
 
 /***/ },
 /* 3 */
 /***/ function(module, exports) {
 
-	/**
-	 * @name BaxterError
-	 */
 	'use strict';
 
-	Object.defineProperty(exports, '__esModule', {
+	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
 
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	/**
+	 * @name BaxterError
+	 */
 
 	var BaxterError = (function (_Error) {
 	    _inherits(BaxterError, _Error);
@@ -996,16 +1014,16 @@
 	    function BaxterError(message) {
 	        _classCallCheck(this, BaxterError);
 
-	        _get(Object.getPrototypeOf(BaxterError.prototype), 'constructor', this).call(this);
+	        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(BaxterError).call(this));
 
-	        this.message = '[Baxter.js]: ' + message;
+	        _this.message = '[Baxter.js]: ' + message;
+	        return _this;
 	    }
 
 	    return BaxterError;
 	})(Error);
 
-	exports['default'] = BaxterError;
-	module.exports = exports['default'];
+	exports.default = BaxterError;
 
 /***/ }
 /******/ ]);
