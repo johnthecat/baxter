@@ -1,11 +1,11 @@
 Baxter
 ======
 
-### Reactive data updating with minimal additional layer
+Reactive data updating with minimal additional layer
 
 ## Overview
 
-Baxter creates reactive bindings without wrapping into functions.
+Baxter provides OORP without functional style.
 
 ## Features
 
@@ -77,21 +77,45 @@ That's great, by this data is not reactive. Now let's try this:
    */
 ```
 
-Class instances hasn't any difference between them, but:
-
+After adding ```baxter.watch(this)``` data becomes reactive:
 ```javascript
-  user.name = 'Jack';
-  user.age = 31;
-  console.log(user.fullName) //Dorian John
-  console.log(user.title) //Dorian John (30)
-
-  // But
 
   reactiveUser.name = 'Jack';
   reactiveUser.age = 31;
   console.log(reactiveUser.fullName) //Dorian Jack
   console.log(reactiveUser.title) //Dorian Jack (31)
 ```
+But:
+
+```javascript
+  user.name = 'Jack';
+  user.age = 31;
+  console.log(user.fullName) //Dorian John
+  console.log(user.title) //Dorian John (30)
+```
+
+Prototype is not changed at all.
+
+## Performance
+
+There are some benchmark results for registering action (creating instance, track it and then dispose) and value change action (change variable and wait, until al dependencies will resolve)
+Test class:
+
+```javascript
+ class Test {
+   constructor() {
+     this.surname = 'Dorian';
+     this.name = 'John';
+     this.fullName = () => this.surname + ' ' + this.name;
+
+     baxter.watch(this);
+ }
+```
+
+Registration: 27.000 - 28.000 ops/sec (28 registration per millisecond)
+
+Changing ```Test.name```: 4.500 ops/sec (4.5 changes per millisecond)
+
 
 ## API reference
 
