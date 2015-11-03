@@ -112,10 +112,10 @@ Test class:
  }
 ```
 
-Registration: 27.000 - 28.000 ops/sec (28 registration per millisecond)
-
-Changing ```Test.name```: 4.500 ops/sec (4.5 changes per millisecond)
-
+| Browser    | Registration (ops/sec) | Changing ```Test.name``` (ops/sec) |
+| -----------|------------------------| -----------------------------------|
+| Chrome 46  | 27.000 - 28.000        | 4.500 - 5.000                      |
+| Safari 9   | 41.000 - 44.000        | 350.000 - 380.000                  |
 
 ## API reference
 
