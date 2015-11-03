@@ -1,5 +1,5 @@
 import EventService from './services/event';
-import LibraryError from './entities/error';
+import BaxterError from './entities/error';
 
 /**
  * @class Baxter
@@ -14,16 +14,16 @@ class Baxter {
         let UID = 1;
 
         /**
-         * @name Baxter.callstack
+         * @name Baxter._callstack
          * @type {Map}
          */
-        this.callstack = new Map();
+        this._callstack = new Map();
 
         /**
-         * @name Baxter.variables
+         * @name Baxter._variables
          * @type {Map}
          */
-        this.variables = new Map();
+        this._variables = new Map();
 
         /**
          * @name Baxter.eventStream
@@ -63,7 +63,7 @@ class Baxter {
                     return this.utils.createObjectUID(object);
                 }
 
-                return object['__uid__']
+                return object['__uid__'];
             },
 
             /**
@@ -95,49 +95,98 @@ class Baxter {
             }
         };
 
+        this._watchers = {
+            variable: {
+                get: (config) => {
+                    let value = config.getValue();
+
+                    this.postEvent('get',
+                        {
+                            uid: config.uid,
+                            owner: config.owner,
+                            key: config.key,
+                            value: value
+                        }
+                    );
+                    return value;
+                },
+                set: (config, newValue) => {
+                    let oldValue = config.getValue();
+
+                    if (newValue === oldValue) {
+                        return false;
+                    }
+
+                    this.postEvent('will-change', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key
+                    });
+
+                    config.setValue(newValue);
+
+                    this.postEvent('update',
+                        {
+                            uid: config.uid,
+                            owner: config.owner,
+                            key: config.key,
+                            value: newValue,
+                            oldValue: oldValue
+                        }
+                    );
+                }
+            },
+            computed: {
+                get: (config) => {
+                    let value = config.getValue();
+
+                    this.postEvent('get', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key,
+                        value: value
+                    });
+
+                    return value;
+                },
+                set: (config, computedResult) => {
+                    let oldValue = config.getValue();
+
+                    if (!config.isComputing()) {
+                        throw new BaxterError('you can\'t set value to computed');
+                    }
+
+                    if (computedResult === oldValue) {
+                        return false;
+                    }
+
+                    config.setIsComputing(false);
+                    config.setValue(computedResult);
+
+
+                    this.postEvent('update', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key,
+                        value: computedResult,
+                        oldValue: oldValue
+                    });
+                }
+            }
+        };
+
         this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 0));
     }
 
     /**
-     * @name Baxter.dispose
-     * @param {Object} owner
-     * @param {String} [key]
+     * @name Baxter.createClosure
+     * @param {Function} func
+     * @param {*} config
+     * @returns {Function}
      */
-    dispose(owner, key) {
-        if (typeof owner !== 'object') {
-            throw new LibraryError('Dispose: object is not defined.');
-        }
-
-        if (!key) {
-            for (let field of (Object.keys(owner))) {
-                let uid = this.utils.createKeyUID(owner, field);
-                let handlers = this.variables.get(uid);
-
-                if (!handlers) {
-                    continue;
-                }
-
-                for (let handler of handlers) {
-                    handler.dispose();
-                    delete owner[field];
-                }
-
-                this.variables.delete(uid);
-            }
-        } else {
-            let uid = this.utils.createKeyUID(owner, key);
-            let handlers = this.variables.get(uid);
-
-            if (!handlers) {
-                return;
-            }
-
-            for (let handler of handlers) {
-                handler.dispose();
-                delete owner[key];
-            }
-
-            this.variables.delete(uid);
+    createClosure(func, config) {
+        return (data) => {
+            return func(config, data);
         }
     }
 
@@ -149,11 +198,11 @@ class Baxter {
      */
     subscribeEvent(eventType, subscriber, once = false) {
         if (typeof eventType !== 'string') {
-            throw new LibraryError('subscribeEvent: eventType is not defined.');
+            throw new BaxterError('subscribeEvent: eventType is not defined.');
         }
 
         if (typeof subscriber !== 'function') {
-            throw new LibraryError('subscribeEvent: subscriber function is not defined.');
+            throw new BaxterError('subscribeEvent: subscriber function is not defined.');
         }
 
         if (once) {
@@ -174,7 +223,7 @@ class Baxter {
      */
     postEvent(eventType, data) {
         if (typeof eventType !== 'string') {
-            throw new LibraryError('postEvent: eventType is not defined.');
+            throw new BaxterError('postEvent: eventType is not defined.');
         }
 
         this.eventStream.post(eventType, data);
@@ -187,11 +236,11 @@ class Baxter {
      * @param {Function} subscriber
      * @param {String} [eventType]
      * @param {Boolean} [once]
-     * @throws {LibraryError}
+     * @throws {BaxterError}
      */
     subscribe(owner, key, subscriber, eventType = 'update', once = false) {
         if (!owner || !key || !subscriber) {
-            throw new LibraryError('subscribe: can\'t subscribe variable without owner, key or callback function.');
+            throw new BaxterError('subscribe: can\'t subscribe variable without owner, key or callback function.');
         }
         let uid = this.utils.createKeyUID(owner, key);
         let availableEvents = ['will-change', 'update'];
@@ -203,7 +252,7 @@ class Baxter {
         };
 
         if (!eventToListen) {
-            throw new LibraryError('subscribe: listening ' + eventType + ' event is not accepted.');
+            throw new BaxterError('subscribe: listening ' + eventType + ' event is not accepted.');
         }
 
         return this.subscribeEvent(eventToListen, eventHandler, once);
@@ -216,13 +265,13 @@ class Baxter {
      */
     resolve(dependencies) {
         if (!(Symbol.iterator in dependencies)) {
-            throw new LibraryError('resolve: dependencies are not iterable.');
+            throw new BaxterError('resolve: dependencies are not iterable.');
         }
 
         let result = new Set();
 
         for (let dependency of dependencies) {
-            result.add(this.callstack.get(dependency));
+            result.add(this._callstack.get(dependency));
         }
 
         return Promise.all(result);
@@ -237,7 +286,7 @@ class Baxter {
      */
     getDependencies(context, computed, callback) {
         if (!context || !computed || !callback) {
-            throw new LibraryError('getDependencies: there is no context, computed function or callback.');
+            throw new BaxterError('getDependencies: there is no context, computed function or callback.');
         }
 
         let listener = this.subscribeEvent('get', callback);
@@ -263,79 +312,64 @@ class Baxter {
             key: key
         });
 
-        this.callstack.set(uid, new Promise((resolve) => {
+        this._callstack.set(uid, new Promise((resolve) => {
             this.subscribeEvent('will-change-all', () => {
                 resolve(callback());
             }, true);
         })
             .then(() => {
-                this.callstack.delete(uid);
-                if (!this.callstack.size) {
+                this._callstack.delete(uid);
+                if (!this._callstack.size) {
                     this.postEvent('change-complete');
                 }
             }));
     }
 
     /**
-     * @name Baxter.observable
+     * @name Baxter.variable
      * @param {Object} owner
      * @param {String} key
      * @param {*} [initialValue]
-     * @returns {*} value
+     * @returns {*} initialValue
      */
-    observable(owner, key, initialValue) {
+    variable(owner, key, initialValue) {
         if (typeof owner !== 'object') {
-            throw new LibraryError('observable: owner object in not defined.');
+            throw new BaxterError('variable: owner object in not defined.');
         }
         if (typeof key !== 'string') {
-            throw new LibraryError('observable: key string in not defined.');
+            throw new BaxterError('variable: key string in not defined.');
         }
 
-        let value = initialValue;
         let uid = this.utils.createKeyUID(owner, key);
 
-        if (this.variables.has(uid)) {
+        if (this._variables.has(uid)) {
             return initialValue;
         }
 
-        this.variables.set(uid, new Set());
+        let value = initialValue;
+        let utils = {
+            getValue: () => value,
+            setValue: (newValue) => value = newValue
+        };
+
+        this._variables.set(uid, new Set());
 
         Object.defineProperty(owner, key,
             {
                 configurable: true,
-                set: (newValue) => {
-                    if (newValue === value) {
-                        return false;
-                    }
-
-                    this.addToStack(owner, key, () => {
-                        let oldValue = value;
-
-                        value = newValue;
-
-                        this.postEvent('update',
-                            {
-                                uid: uid,
-                                owner: owner,
-                                key: key,
-                                value: value,
-                                oldValue: oldValue
-                            }
-                        );
-                    });
-                },
-
-                get: () => {
-                    this.postEvent('get',
-                        {
-                            uid: uid,
-                            owner: owner,
-                            key: key,
-                            value: value
-                        }
-                    );
-                    return value;
-                }
+                get: this.createClosure(this._watchers.variable.get, {
+                    uid: uid,
+                    owner: owner,
+                    key: key,
+                    getValue: utils.getValue
+                }),
+                set: this.createClosure(this._watchers.variable.set, {
+                    uid: uid,
+                    owner: owner,
+                    key: key,
+                    setValue: utils.setValue,
+                    getValue: utils.getValue
+                })
             }
         );
 
@@ -352,62 +386,54 @@ class Baxter {
      */
     computed(owner, key, computedObservable, userDependencies) {
         if (typeof owner !== 'object') {
-            throw new LibraryError('computed: owner object in not defined.');
+            throw new BaxterError('computed: owner object in not defined.');
         }
 
         if (typeof key !== 'string') {
-            throw new LibraryError('computed: key string in not defined.');
+            throw new BaxterError('computed: key string in not defined.');
         }
 
         if (typeof computedObservable !== 'function') {
-            throw new LibraryError('computed: computedObservable function in not defined.');
+            throw new BaxterError('computed: computedObservable function in not defined.');
         }
 
-        let value;
-        let oldValue;
-        let isComputing = false;
-        let computedUID = this.utils.createKeyUID(owner, key);
-        let canUpdate = false;
-        let dependencies = new Set();
-        let handlers = new Set();
+        let uid = this.utils.createKeyUID(owner, key);
 
-        if (this.variables.has(computedUID)) {
+        if (this._variables.has(uid)) {
             return computedObservable;
         }
 
-        this.variables.set(computedUID, handlers);
+        let latestValue;
+        let previousValue;
+        let isComputing = false;
+        let dependencies = new Set();
+        let handlers = new Set();
+        let utils = {
+            getValue: () => latestValue,
+            setValue: (newValue) => latestValue = newValue,
+            setIsComputing: (value) => isComputing = value,
+            isComputing: () => isComputing
+        };
+
+        this._variables.set(uid, handlers);
 
         Object.defineProperty(owner, key, {
             configurable: true,
-            get: () => {
-                this.postEvent('get', {
-                    uid: computedUID,
-                    owner: owner,
-                    key: key,
-                    value: value
-                });
-
-                return value;
-            },
-            set: (computedValue) => {
-                if (!canUpdate) {
-                    throw new LibraryError('you can\'t set value to computed');
-                }
-                canUpdate = false;
-                value = computedValue;
-
-                if (value === oldValue) {
-                    return false;
-                }
-
-                this.postEvent('update', {
-                    uid: computedUID,
-                    owner: owner,
-                    key: key,
-                    value: value,
-                    oldValue: oldValue
-                });
-            }
+            get: this.createClosure(this._watchers.computed.get, {
+                uid: uid,
+                owner: owner,
+                key: key,
+                getValue: utils.getValue
+            }),
+            set: this.createClosure(this._watchers.computed.set, {
+                uid: uid,
+                owner: owner,
+                key: key,
+                setValue: utils.setValue,
+                getValue: utils.getValue,
+                isComputing: utils.isComputing,
+                setIsComputing: utils.setIsComputing
+            })
         });
 
         let handleObservable = (handledValue) => {
@@ -418,25 +444,21 @@ class Baxter {
                     return false;
                 }
 
+                isComputing = true;
+
                 this.addToStack(owner, key, () => {
                     return this.resolve(dependencies)
                         .then(() => {
-                            oldValue = value;
+                            previousValue = latestValue;
                             return computedObservable.call(owner);
                         })
                         .then((value) => {
-                            isComputing = false;
-                            canUpdate = true;
                             owner[key] = value;
                         })
                         .catch(() => {
-                            isComputing = false;
-                            canUpdate = true;
                             owner[key] = undefined;
                         });
                 });
-
-                isComputing = true;
             }, 'will-change');
 
             handlers.add(subscriber);
@@ -454,17 +476,17 @@ class Baxter {
                 this.addToStack(owner, key, () => {
                     return this.resolve(dependencies)
                         .then(() => {
-                            canUpdate = true;
+                            isComputing = true;
                             owner[key] = result;
                         });
                 });
             });
         } else {
-            canUpdate = true;
+            isComputing = true;
             owner[key] = calculatedValue;
         }
 
-        return value;
+        return latestValue;
     }
 
     /**
@@ -473,8 +495,10 @@ class Baxter {
      */
     watch(object) {
         if (typeof object !== 'object') {
-            throw new LibraryError('watch: object is not defined.');
+            throw new BaxterError('watch: object is not defined.');
         }
+
+        let computedVariables = [];
 
         for (let key in object) {
             if (!object.hasOwnProperty(key)) {
@@ -483,13 +507,65 @@ class Baxter {
 
             let value = object[key];
             if (typeof value === 'function') {
-                this.computed(object, key, value);
+                computedVariables.push({
+                    owner: object,
+                    key: key,
+                    value: value
+                });
             } else {
-                this.observable(object, key, value);
+                this.variable(object, key, value);
             }
         }
 
+        for (let index = 0, computedLength = computedVariables.length; index < computedLength; index++) {
+            let computed = computedVariables[index];
+            this.computed(computed.owner, computed.key, computed.value);
+        }
+
         return object;
+    }
+
+    /**
+     * @name Baxter.dispose
+     * @param {Object} owner
+     * @param {String} [key]
+     */
+    dispose(owner, key) {
+        if (typeof owner !== 'object') {
+            throw new BaxterError('Dispose: object is not defined.');
+        }
+
+        if (!key) {
+            for (let field of (Object.keys(owner))) {
+                let uid = this.utils.createKeyUID(owner, field);
+                let handlers = this._variables.get(uid);
+
+                if (!handlers) {
+                    continue;
+                }
+
+                for (let handler of handlers) {
+                    handler.dispose();
+                    delete owner[field];
+                }
+
+                this._variables.delete(uid);
+            }
+        } else {
+            let uid = this.utils.createKeyUID(owner, key);
+            let handlers = this._variables.get(uid);
+
+            if (!handlers) {
+                return;
+            }
+
+            for (let handler of handlers) {
+                handler.dispose();
+                delete owner[key];
+            }
+
+            this._variables.delete(uid);
+        }
     }
 }
 

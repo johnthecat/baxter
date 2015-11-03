@@ -1,12 +1,12 @@
 /**
- * @name LibraryError
+ * @name BaxterError
  */
-class LibraryError extends Error {
+class BaxterError extends Error {
     constructor(message) {
         super();
 
-        this.message = '[Twin.js]: ' + message;
+        this.message = '[Baxter.js]: ' + message;
     }
 }
 
-export default LibraryError;
+export default BaxterError;

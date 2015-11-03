@@ -44,11 +44,13 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	'use strict';
 
 	var _baxter = __webpack_require__(1);
 
 	var _baxter2 = _interopRequireDefault(_baxter);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	(function (name, lib, browserContext) {
 	    if (browserContext) {
@@ -59,29 +61,35 @@
 	        }
 	        exports[name] = lib;
 	    }
-	})('baxter', _baxter2['default'], window);
+	})('baxter', _baxter2.default, window);
 
 /***/ },
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	Object.defineProperty(exports, '__esModule', {
+	'use strict';
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
 
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	var _event = __webpack_require__(2);
 
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	var _event2 = _interopRequireDefault(_event);
 
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	var _error = __webpack_require__(3);
 
-	var _servicesEvent = __webpack_require__(2);
+	var _error2 = _interopRequireDefault(_error);
 
-	var _servicesEvent2 = _interopRequireDefault(_servicesEvent);
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	var _entitiesError = __webpack_require__(3);
+	function _instanceof(left, right) { if (right != null && right[Symbol.hasInstance]) { return right[Symbol.hasInstance](left); } else { return left instanceof right; } }
 
-	var _entitiesError2 = _interopRequireDefault(_entitiesError);
+	function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	/**
 	 * @class Baxter
@@ -101,23 +109,23 @@
 	        var UID = 1;
 
 	        /**
-	         * @name Baxter.callstack
+	         * @name Baxter._callstack
 	         * @type {Map}
 	         */
-	        this.callstack = new Map();
+	        this._callstack = new Map();
 
 	        /**
-	         * @name Baxter.variables
+	         * @name Baxter._variables
 	         * @type {Map}
 	         */
-	        this.variables = new Map();
+	        this._variables = new Map();
 
 	        /**
 	         * @name Baxter.eventStream
 	         * @type {EventService}
 	         * @description Provides events service
 	         */
-	        this.eventStream = new _servicesEvent2['default'](this);
+	        this.eventStream = new _event2.default(this);
 
 	        /**
 	         * @name Baxter.utils
@@ -182,118 +190,99 @@
 	            }
 	        };
 
+	        this._watchers = {
+	            variable: {
+	                get: function get(config) {
+	                    var value = config.getValue();
+
+	                    _this.postEvent('get', {
+	                        uid: config.uid,
+	                        owner: config.owner,
+	                        key: config.key,
+	                        value: value
+	                    });
+	                    return value;
+	                },
+	                set: function set(config, newValue) {
+	                    var oldValue = config.getValue();
+
+	                    if (newValue === oldValue) {
+	                        return false;
+	                    }
+
+	                    _this.postEvent('will-change', {
+	                        uid: config.uid,
+	                        owner: config.owner,
+	                        key: config.key
+	                    });
+
+	                    config.setValue(newValue);
+
+	                    _this.postEvent('update', {
+	                        uid: config.uid,
+	                        owner: config.owner,
+	                        key: config.key,
+	                        value: newValue,
+	                        oldValue: oldValue
+	                    });
+	                }
+	            },
+	            computed: {
+	                get: function get(config) {
+	                    var value = config.getValue();
+
+	                    _this.postEvent('get', {
+	                        uid: config.uid,
+	                        owner: config.owner,
+	                        key: config.key,
+	                        value: value
+	                    });
+
+	                    return value;
+	                },
+	                set: function set(config, computedResult) {
+	                    var oldValue = config.getValue();
+
+	                    if (!config.isComputing()) {
+	                        throw new _error2.default('you can\'t set value to computed');
+	                    }
+
+	                    if (computedResult === oldValue) {
+	                        return false;
+	                    }
+
+	                    config.setIsComputing(false);
+	                    config.setValue(computedResult);
+
+	                    _this.postEvent('update', {
+	                        uid: config.uid,
+	                        owner: config.owner,
+	                        key: config.key,
+	                        value: computedResult,
+	                        oldValue: oldValue
+	                    });
+	                }
+	            }
+	        };
+
 	        this.subscribeEvent('will-change', this.utils.debounce(function () {
 	            return _this.postEvent('will-change-all');
 	        }, 0));
 	    }
 
 	    /**
-	     * @name Baxter.dispose
-	     * @param {Object} owner
-	     * @param {String} [key]
+	     * @name Baxter.createClosure
+	     * @param {Function} func
+	     * @param {*} config
+	     * @returns {Function}
 	     */
 
 	    _createClass(Baxter, [{
-	        key: 'dispose',
-	        value: function dispose(owner, key) {
-	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('Dispose: object is not defined.');
-	            }
-
-	            if (!key) {
-	                var _iteratorNormalCompletion = true;
-	                var _didIteratorError = false;
-	                var _iteratorError = undefined;
-
-	                try {
-	                    for (var _iterator = Object.keys(owner)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	                        var field = _step.value;
-
-	                        var uid = this.utils.createKeyUID(owner, field);
-	                        var handlers = this.variables.get(uid);
-
-	                        if (!handlers) {
-	                            continue;
-	                        }
-
-	                        var _iteratorNormalCompletion2 = true;
-	                        var _didIteratorError2 = false;
-	                        var _iteratorError2 = undefined;
-
-	                        try {
-	                            for (var _iterator2 = handlers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	                                var handler = _step2.value;
-
-	                                handler.dispose();
-	                                delete owner[field];
-	                            }
-	                        } catch (err) {
-	                            _didIteratorError2 = true;
-	                            _iteratorError2 = err;
-	                        } finally {
-	                            try {
-	                                if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-	                                    _iterator2['return']();
-	                                }
-	                            } finally {
-	                                if (_didIteratorError2) {
-	                                    throw _iteratorError2;
-	                                }
-	                            }
-	                        }
-
-	                        this.variables['delete'](uid);
-	                    }
-	                } catch (err) {
-	                    _didIteratorError = true;
-	                    _iteratorError = err;
-	                } finally {
-	                    try {
-	                        if (!_iteratorNormalCompletion && _iterator['return']) {
-	                            _iterator['return']();
-	                        }
-	                    } finally {
-	                        if (_didIteratorError) {
-	                            throw _iteratorError;
-	                        }
-	                    }
-	                }
-	            } else {
-	                var uid = this.utils.createKeyUID(owner, key);
-	                var handlers = this.variables.get(uid);
-
-	                if (!handlers) {
-	                    return;
-	                }
-
-	                var _iteratorNormalCompletion3 = true;
-	                var _didIteratorError3 = false;
-	                var _iteratorError3 = undefined;
-
-	                try {
-	                    for (var _iterator3 = handlers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	                        var handler = _step3.value;
-
-	                        handler.dispose();
-	                        delete owner[key];
-	                    }
-	                } catch (err) {
-	                    _didIteratorError3 = true;
-	                    _iteratorError3 = err;
-	                } finally {
-	                    try {
-	                        if (!_iteratorNormalCompletion3 && _iterator3['return']) {
-	                            _iterator3['return']();
-	                        }
-	                    } finally {
-	                        if (_didIteratorError3) {
-	                            throw _iteratorError3;
-	                        }
-	                    }
-	                }
-
-	                this.variables['delete'](uid);
-	            }
+	        key: 'createClosure',
+	        value: function createClosure(func, config) {
+	            return function (data) {
+	                return func(config, data);
+	            };
 	        }
 
 	        /**
@@ -302,6 +291,7 @@
 	         * @param {Function} subscriber
 	         * @param {Boolean} [once]
 	         */
+
 	    }, {
 	        key: 'subscribeEvent',
 	        value: function subscribeEvent(eventType, subscriber) {
@@ -310,11 +300,11 @@
 	            var once = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
 
 	            if (typeof eventType !== 'string') {
-	                throw new _entitiesError2['default']('subscribeEvent: eventType is not defined.');
+	                throw new _error2.default('subscribeEvent: eventType is not defined.');
 	            }
 
 	            if (typeof subscriber !== 'function') {
-	                throw new _entitiesError2['default']('subscribeEvent: subscriber function is not defined.');
+	                throw new _error2.default('subscribeEvent: subscriber function is not defined.');
 	            }
 
 	            if (once) {
@@ -335,11 +325,12 @@
 	         * @param {String} eventType
 	         * @param {*} [data]
 	         */
+
 	    }, {
 	        key: 'postEvent',
 	        value: function postEvent(eventType, data) {
 	            if (typeof eventType !== 'string') {
-	                throw new _entitiesError2['default']('postEvent: eventType is not defined.');
+	                throw new _error2.default('postEvent: eventType is not defined.');
 	            }
 
 	            this.eventStream.post(eventType, data);
@@ -352,8 +343,9 @@
 	         * @param {Function} subscriber
 	         * @param {String} [eventType]
 	         * @param {Boolean} [once]
-	         * @throws {LibraryError}
+	         * @throws {BaxterError}
 	         */
+
 	    }, {
 	        key: 'subscribe',
 	        value: function subscribe(owner, key, subscriber) {
@@ -361,7 +353,7 @@
 	            var once = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
 
 	            if (!owner || !key || !subscriber) {
-	                throw new _entitiesError2['default']('subscribe: can\'t subscribe variable without owner, key or callback function.');
+	                throw new _error2.default('subscribe: can\'t subscribe variable without owner, key or callback function.');
 	            }
 	            var uid = this.utils.createKeyUID(owner, key);
 	            var availableEvents = ['will-change', 'update'];
@@ -373,7 +365,7 @@
 	            };
 
 	            if (!eventToListen) {
-	                throw new _entitiesError2['default']('subscribe: listening ' + eventType + ' event is not accepted.');
+	                throw new _error2.default('subscribe: listening ' + eventType + ' event is not accepted.');
 	            }
 
 	            return this.subscribeEvent(eventToListen, eventHandler, once);
@@ -384,36 +376,37 @@
 	         * @param {Set|Array} dependencies
 	         * @returns {Promise}
 	         */
+
 	    }, {
 	        key: 'resolve',
 	        value: function resolve(dependencies) {
 	            if (!(Symbol.iterator in dependencies)) {
-	                throw new _entitiesError2['default']('resolve: dependencies are not iterable.');
+	                throw new _error2.default('resolve: dependencies are not iterable.');
 	            }
 
 	            var result = new Set();
 
-	            var _iteratorNormalCompletion4 = true;
-	            var _didIteratorError4 = false;
-	            var _iteratorError4 = undefined;
+	            var _iteratorNormalCompletion = true;
+	            var _didIteratorError = false;
+	            var _iteratorError = undefined;
 
 	            try {
-	                for (var _iterator4 = dependencies[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	                    var dependency = _step4.value;
+	                for (var _iterator = dependencies[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	                    var dependency = _step.value;
 
-	                    result.add(this.callstack.get(dependency));
+	                    result.add(this._callstack.get(dependency));
 	                }
 	            } catch (err) {
-	                _didIteratorError4 = true;
-	                _iteratorError4 = err;
+	                _didIteratorError = true;
+	                _iteratorError = err;
 	            } finally {
 	                try {
-	                    if (!_iteratorNormalCompletion4 && _iterator4['return']) {
-	                        _iterator4['return']();
+	                    if (!_iteratorNormalCompletion && _iterator.return) {
+	                        _iterator.return();
 	                    }
 	                } finally {
-	                    if (_didIteratorError4) {
-	                        throw _iteratorError4;
+	                    if (_didIteratorError) {
+	                        throw _iteratorError;
 	                    }
 	                }
 	            }
@@ -428,11 +421,12 @@
 	         * @param {Function} callback
 	         * @returns {*} Result of computing
 	         */
+
 	    }, {
 	        key: 'getDependencies',
 	        value: function getDependencies(context, computed, callback) {
 	            if (!context || !computed || !callback) {
-	                throw new _entitiesError2['default']('getDependencies: there is no context, computed function or callback.');
+	                throw new _error2.default('getDependencies: there is no context, computed function or callback.');
 	            }
 
 	            var listener = this.subscribeEvent('get', callback);
@@ -449,6 +443,7 @@
 	         * @param {String} key
 	         * @param {Function} callback
 	         */
+
 	    }, {
 	        key: 'addToStack',
 	        value: function addToStack(owner, key, callback) {
@@ -462,77 +457,69 @@
 	                key: key
 	            });
 
-	            this.callstack.set(uid, new Promise(function (resolve) {
+	            this._callstack.set(uid, new Promise(function (resolve) {
 	                _this3.subscribeEvent('will-change-all', function () {
 	                    resolve(callback());
 	                }, true);
 	            }).then(function () {
-	                _this3.callstack['delete'](uid);
-	                if (!_this3.callstack.size) {
+	                _this3._callstack.delete(uid);
+	                if (!_this3._callstack.size) {
 	                    _this3.postEvent('change-complete');
 	                }
 	            }));
 	        }
 
 	        /**
-	         * @name Baxter.observable
+	         * @name Baxter.variable
 	         * @param {Object} owner
 	         * @param {String} key
 	         * @param {*} [initialValue]
-	         * @returns {*} value
+	         * @returns {*} initialValue
 	         */
-	    }, {
-	        key: 'observable',
-	        value: function observable(owner, key, initialValue) {
-	            var _this4 = this;
 
-	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('observable: owner object in not defined.');
+	    }, {
+	        key: 'variable',
+	        value: function variable(owner, key, initialValue) {
+	            if ((typeof owner === 'undefined' ? 'undefined' : _typeof(owner)) !== 'object') {
+	                throw new _error2.default('variable: owner object in not defined.');
 	            }
 	            if (typeof key !== 'string') {
-	                throw new _entitiesError2['default']('observable: key string in not defined.');
+	                throw new _error2.default('variable: key string in not defined.');
 	            }
 
-	            var value = initialValue;
 	            var uid = this.utils.createKeyUID(owner, key);
 
-	            if (this.variables.has(uid)) {
+	            if (this._variables.has(uid)) {
 	                return initialValue;
 	            }
 
-	            this.variables.set(uid, new Set());
+	            var value = initialValue;
+	            var utils = {
+	                getValue: function getValue() {
+	                    return value;
+	                },
+	                setValue: function setValue(newValue) {
+	                    return value = newValue;
+	                }
+	            };
+
+	            this._variables.set(uid, new Set());
 
 	            Object.defineProperty(owner, key, {
 	                configurable: true,
-	                set: function set(newValue) {
-	                    if (newValue === value) {
-	                        return false;
-	                    }
-
-	                    _this4.addToStack(owner, key, function () {
-	                        var oldValue = value;
-
-	                        value = newValue;
-
-	                        _this4.postEvent('update', {
-	                            uid: uid,
-	                            owner: owner,
-	                            key: key,
-	                            value: value,
-	                            oldValue: oldValue
-	                        });
-	                    });
-	                },
-
-	                get: function get() {
-	                    _this4.postEvent('get', {
-	                        uid: uid,
-	                        owner: owner,
-	                        key: key,
-	                        value: value
-	                    });
-	                    return value;
-	                }
+	                get: this.createClosure(this._watchers.variable.get, {
+	                    uid: uid,
+	                    owner: owner,
+	                    key: key,
+	                    getValue: utils.getValue
+	                }),
+	                set: this.createClosure(this._watchers.variable.set, {
+	                    uid: uid,
+	                    owner: owner,
+	                    key: key,
+	                    setValue: utils.setValue,
+	                    getValue: utils.getValue
+	                })
 	            });
 
 	            return value;
@@ -546,154 +533,154 @@
 	         * @param {Set|Map|Array} [userDependencies]
 	         * @returns {*}
 	         */
+
 	    }, {
 	        key: 'computed',
 	        value: function computed(owner, key, computedObservable, userDependencies) {
-	            var _this5 = this;
+	            var _this4 = this;
 
-	            if (typeof owner !== 'object') {
-	                throw new _entitiesError2['default']('computed: owner object in not defined.');
+	            if ((typeof owner === 'undefined' ? 'undefined' : _typeof(owner)) !== 'object') {
+	                throw new _error2.default('computed: owner object in not defined.');
 	            }
 
 	            if (typeof key !== 'string') {
-	                throw new _entitiesError2['default']('computed: key string in not defined.');
+	                throw new _error2.default('computed: key string in not defined.');
 	            }
 
 	            if (typeof computedObservable !== 'function') {
-	                throw new _entitiesError2['default']('computed: computedObservable function in not defined.');
+	                throw new _error2.default('computed: computedObservable function in not defined.');
 	            }
 
-	            var value = undefined;
-	            var oldValue = undefined;
-	            var isComputing = false;
-	            var computedUID = this.utils.createKeyUID(owner, key);
-	            var canUpdate = false;
-	            var dependencies = new Set();
-	            var handlers = new Set();
+	            var uid = this.utils.createKeyUID(owner, key);
 
-	            if (this.variables.has(computedUID)) {
+	            if (this._variables.has(uid)) {
 	                return computedObservable;
 	            }
 
-	            this.variables.set(computedUID, handlers);
+	            var latestValue = undefined;
+	            var previousValue = undefined;
+	            var _isComputing = false;
+	            var dependencies = new Set();
+	            var handlers = new Set();
+	            var utils = {
+	                getValue: function getValue() {
+	                    return latestValue;
+	                },
+	                setValue: function setValue(newValue) {
+	                    return latestValue = newValue;
+	                },
+	                setIsComputing: function setIsComputing(value) {
+	                    return _isComputing = value;
+	                },
+	                isComputing: function isComputing() {
+	                    return _isComputing;
+	                }
+	            };
+
+	            this._variables.set(uid, handlers);
 
 	            Object.defineProperty(owner, key, {
 	                configurable: true,
-	                get: function get() {
-	                    _this5.postEvent('get', {
-	                        uid: computedUID,
-	                        owner: owner,
-	                        key: key,
-	                        value: value
-	                    });
-
-	                    return value;
-	                },
-	                set: function set(computedValue) {
-	                    if (!canUpdate) {
-	                        throw new _entitiesError2['default']('you can\'t set value to computed');
-	                    }
-	                    canUpdate = false;
-	                    value = computedValue;
-
-	                    if (value === oldValue) {
-	                        return false;
-	                    }
-
-	                    _this5.postEvent('update', {
-	                        uid: computedUID,
-	                        owner: owner,
-	                        key: key,
-	                        value: value,
-	                        oldValue: oldValue
-	                    });
-	                }
+	                get: this.createClosure(this._watchers.computed.get, {
+	                    uid: uid,
+	                    owner: owner,
+	                    key: key,
+	                    getValue: utils.getValue
+	                }),
+	                set: this.createClosure(this._watchers.computed.set, {
+	                    uid: uid,
+	                    owner: owner,
+	                    key: key,
+	                    setValue: utils.setValue,
+	                    getValue: utils.getValue,
+	                    isComputing: utils.isComputing,
+	                    setIsComputing: utils.setIsComputing
+	                })
 	            });
 
 	            var handleObservable = function handleObservable(handledValue) {
 	                dependencies.add(handledValue.uid);
 
-	                var subscriber = _this5.subscribe(handledValue.owner, handledValue.key, function () {
-	                    if (isComputing) {
+	                var subscriber = _this4.subscribe(handledValue.owner, handledValue.key, function () {
+	                    if (_isComputing) {
 	                        return false;
 	                    }
 
-	                    _this5.addToStack(owner, key, function () {
-	                        return _this5.resolve(dependencies).then(function () {
-	                            oldValue = value;
+	                    _isComputing = true;
+
+	                    _this4.addToStack(owner, key, function () {
+	                        return _this4.resolve(dependencies).then(function () {
+	                            previousValue = latestValue;
 	                            return computedObservable.call(owner);
 	                        }).then(function (value) {
-	                            isComputing = false;
-	                            canUpdate = true;
 	                            owner[key] = value;
-	                        })['catch'](function () {
-	                            isComputing = false;
-	                            canUpdate = true;
+	                        }).catch(function () {
 	                            owner[key] = undefined;
 	                        });
 	                    });
-
-	                    isComputing = true;
 	                }, 'will-change');
 
 	                handlers.add(subscriber);
 	            };
 
 	            if (Symbol.iterator in Object(userDependencies)) {
-	                var _iteratorNormalCompletion5 = true;
-	                var _didIteratorError5 = false;
-	                var _iteratorError5 = undefined;
+	                var _iteratorNormalCompletion2 = true;
+	                var _didIteratorError2 = false;
+	                var _iteratorError2 = undefined;
 
 	                try {
-	                    for (var _iterator5 = userDependencies[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	                        var userDependency = _step5.value;
+	                    for (var _iterator2 = userDependencies[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	                        var userDependency = _step2.value;
 
 	                        handleObservable(userDependency);
 	                    }
 	                } catch (err) {
-	                    _didIteratorError5 = true;
-	                    _iteratorError5 = err;
+	                    _didIteratorError2 = true;
+	                    _iteratorError2 = err;
 	                } finally {
 	                    try {
-	                        if (!_iteratorNormalCompletion5 && _iterator5['return']) {
-	                            _iterator5['return']();
+	                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                            _iterator2.return();
 	                        }
 	                    } finally {
-	                        if (_didIteratorError5) {
-	                            throw _iteratorError5;
+	                        if (_didIteratorError2) {
+	                            throw _iteratorError2;
 	                        }
 	                    }
 	                }
 	            }
 
 	            var calculatedValue = this.getDependencies(owner, computedObservable, handleObservable);
-	            if (calculatedValue instanceof Promise) {
+	            if (_instanceof(calculatedValue, Promise)) {
 	                calculatedValue.then(function (result) {
-	                    _this5.addToStack(owner, key, function () {
-	                        return _this5.resolve(dependencies).then(function () {
-	                            canUpdate = true;
+	                    _this4.addToStack(owner, key, function () {
+	                        return _this4.resolve(dependencies).then(function () {
+	                            _isComputing = true;
 	                            owner[key] = result;
 	                        });
 	                    });
 	                });
 	            } else {
-	                canUpdate = true;
+	                _isComputing = true;
 	                owner[key] = calculatedValue;
 	            }
 
-	            return value;
+	            return latestValue;
 	        }
 
 	        /**
 	         * @name Baxter.watch
 	         * @param {Object} object
 	         */
+
 	    }, {
 	        key: 'watch',
 	        value: function watch(object) {
-	            if (typeof object !== 'object') {
-	                throw new _entitiesError2['default']('watch: object is not defined.');
+	            if ((typeof object === 'undefined' ? 'undefined' : _typeof(object)) !== 'object') {
+	                throw new _error2.default('watch: object is not defined.');
 	            }
+
+	            var computedVariables = [];
 
 	            for (var key in object) {
 	                if (!object.hasOwnProperty(key)) {
@@ -702,31 +689,150 @@
 
 	                var value = object[key];
 	                if (typeof value === 'function') {
-	                    this.computed(object, key, value);
+	                    computedVariables.push({
+	                        owner: object,
+	                        key: key,
+	                        value: value
+	                    });
 	                } else {
-	                    this.observable(object, key, value);
+	                    this.variable(object, key, value);
 	                }
 	            }
 
+	            for (var index = 0, computedLength = computedVariables.length; index < computedLength; index++) {
+	                var computed = computedVariables[index];
+	                this.computed(computed.owner, computed.key, computed.value);
+	            }
+
 	            return object;
+	        }
+
+	        /**
+	         * @name Baxter.dispose
+	         * @param {Object} owner
+	         * @param {String} [key]
+	         */
+
+	    }, {
+	        key: 'dispose',
+	        value: function dispose(owner, key) {
+	            if ((typeof owner === 'undefined' ? 'undefined' : _typeof(owner)) !== 'object') {
+	                throw new _error2.default('Dispose: object is not defined.');
+	            }
+
+	            if (!key) {
+	                var _iteratorNormalCompletion3 = true;
+	                var _didIteratorError3 = false;
+	                var _iteratorError3 = undefined;
+
+	                try {
+	                    for (var _iterator3 = Object.keys(owner)[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+	                        var field = _step3.value;
+
+	                        var uid = this.utils.createKeyUID(owner, field);
+	                        var handlers = this._variables.get(uid);
+
+	                        if (!handlers) {
+	                            continue;
+	                        }
+
+	                        var _iteratorNormalCompletion4 = true;
+	                        var _didIteratorError4 = false;
+	                        var _iteratorError4 = undefined;
+
+	                        try {
+	                            for (var _iterator4 = handlers[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+	                                var handler = _step4.value;
+
+	                                handler.dispose();
+	                                delete owner[field];
+	                            }
+	                        } catch (err) {
+	                            _didIteratorError4 = true;
+	                            _iteratorError4 = err;
+	                        } finally {
+	                            try {
+	                                if (!_iteratorNormalCompletion4 && _iterator4.return) {
+	                                    _iterator4.return();
+	                                }
+	                            } finally {
+	                                if (_didIteratorError4) {
+	                                    throw _iteratorError4;
+	                                }
+	                            }
+	                        }
+
+	                        this._variables.delete(uid);
+	                    }
+	                } catch (err) {
+	                    _didIteratorError3 = true;
+	                    _iteratorError3 = err;
+	                } finally {
+	                    try {
+	                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+	                            _iterator3.return();
+	                        }
+	                    } finally {
+	                        if (_didIteratorError3) {
+	                            throw _iteratorError3;
+	                        }
+	                    }
+	                }
+	            } else {
+	                var uid = this.utils.createKeyUID(owner, key);
+	                var handlers = this._variables.get(uid);
+
+	                if (!handlers) {
+	                    return;
+	                }
+
+	                var _iteratorNormalCompletion5 = true;
+	                var _didIteratorError5 = false;
+	                var _iteratorError5 = undefined;
+
+	                try {
+	                    for (var _iterator5 = handlers[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+	                        var handler = _step5.value;
+
+	                        handler.dispose();
+	                        delete owner[key];
+	                    }
+	                } catch (err) {
+	                    _didIteratorError5 = true;
+	                    _iteratorError5 = err;
+	                } finally {
+	                    try {
+	                        if (!_iteratorNormalCompletion5 && _iterator5.return) {
+	                            _iterator5.return();
+	                        }
+	                    } finally {
+	                        if (_didIteratorError5) {
+	                            throw _iteratorError5;
+	                        }
+	                    }
+	                }
+
+	                this._variables.delete(uid);
+	            }
 	        }
 	    }]);
 
 	    return Baxter;
 	})();
 
-	exports['default'] = new Baxter();
-	module.exports = exports['default'];
+	exports.default = new Baxter();
 
 /***/ },
 /* 2 */
 /***/ function(module, exports) {
 
+	"use strict";
+
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -772,6 +878,7 @@
 	         * @param {string} event - Event name
 	         * @param {function} handler - Callback function with data as argument
 	         */
+
 	    }, {
 	        key: "on",
 	        value: function on(event, handler) {
@@ -787,6 +894,7 @@
 	         * @param {string} event
 	         * @param {function} handler
 	         */
+
 	    }, {
 	        key: "once",
 	        value: function once(event, handler) {
@@ -810,6 +918,7 @@
 	         * @param {function} [handlerToDelete]
 	         * @returns {boolean}
 	         */
+
 	    }, {
 	        key: "off",
 	        value: function off(event, handlerToDelete) {
@@ -823,7 +932,7 @@
 
 	            var eventHandlers = this.channels[event];
 
-	            eventHandlers["delete"](handlerToDelete);
+	            eventHandlers.delete(handlerToDelete);
 
 	            if (!eventHandlers.size) {
 	                delete this.channels[event];
@@ -835,6 +944,7 @@
 	         * @param {string} event
 	         * @param {*} data
 	         */
+
 	    }, {
 	        key: "post",
 	        value: function post(event, data) {
@@ -861,8 +971,8 @@
 	                _iteratorError = err;
 	            } finally {
 	                try {
-	                    if (!_iteratorNormalCompletion && _iterator["return"]) {
-	                        _iterator["return"]();
+	                    if (!_iteratorNormalCompletion && _iterator.return) {
+	                        _iterator.return();
 	                    }
 	                } finally {
 	                    if (_didIteratorError) {
@@ -876,43 +986,44 @@
 	    return EventService;
 	})();
 
-	exports["default"] = EventService;
-	module.exports = exports["default"];
+	exports.default = EventService;
 
 /***/ },
 /* 3 */
 /***/ function(module, exports) {
 
-	Object.defineProperty(exports, '__esModule', {
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
 
-	var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-	function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 	/**
-	 * @name LibraryError
+	 * @name BaxterError
 	 */
 
-	var LibraryError = (function (_Error) {
-	    _inherits(LibraryError, _Error);
+	var BaxterError = (function (_Error) {
+	    _inherits(BaxterError, _Error);
 
-	    function LibraryError(message) {
-	        _classCallCheck(this, LibraryError);
+	    function BaxterError(message) {
+	        _classCallCheck(this, BaxterError);
 
-	        _get(Object.getPrototypeOf(LibraryError.prototype), 'constructor', this).call(this);
+	        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(BaxterError).call(this));
 
-	        this.message = '[Twin.js]: ' + message;
+	        _this.message = '[Baxter.js]: ' + message;
+	        return _this;
 	    }
 
-	    return LibraryError;
+	    return BaxterError;
 	})(Error);
 
-	exports['default'] = LibraryError;
-	module.exports = exports['default'];
+	exports.default = BaxterError;
 
 /***/ }
 /******/ ]);
