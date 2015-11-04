@@ -271,13 +271,31 @@
 	    }
 
 	    /**
-	     * @name Baxter.createClosure
-	     * @param {Function} func
-	     * @param {*} config
-	     * @returns {Function}
+	     * @name Baxter.plugin
+	     * @param {String} namespace
+	     * @param {*} plugin
 	     */
 
 	    _createClass(Baxter, [{
+	        key: 'plugin',
+	        value: function plugin(namespace, _plugin) {
+	            var exceptedNames = ['_callstack', '_variables', '_watchers', 'eventStream', 'utils', 'plugin', 'createClosure', 'subscribeEvent', 'subscribe', 'postEvent', 'resolve', 'getDependencies', 'addToStack', 'variable', 'computed', 'watch', 'dispose'];
+
+	            if (exceptedNames.indexOf(namespace) !== -1) {
+	                throw new _error2.default('plugin: name of your plugin is already reserved. Try to rename your plugin');
+	            }
+
+	            return this[namespace] = _plugin;
+	        }
+
+	        /**
+	         * @name Baxter.createClosure
+	         * @param {Function} func
+	         * @param {*} config
+	         * @returns {Function}
+	         */
+
+	    }, {
 	        key: 'createClosure',
 	        value: function createClosure(func, config) {
 	            return function (data) {

@@ -119,6 +119,16 @@ Test class:
 
 ## API reference
 
+### baxter.plugin(namespace, plugin)
+
+* **namespace** {String} - name of your plugin
+* **plugin** {*} - your plugin
+
+```javascript
+  baxter.plugin('somePlugin', () => alert('Hi, i\'m plugin!'));
+  baxter.somePlugin(); //Will alert message
+```
+
 ### baxter.watch(object)
 
 * **object** {Object} - any object or instance of class

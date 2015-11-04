@@ -179,6 +179,39 @@ class Baxter {
     }
 
     /**
+     * @name Baxter.plugin
+     * @param {String} namespace
+     * @param {*} plugin
+     */
+    plugin(namespace, plugin) {
+        let exceptedNames = [
+            '_callstack',
+            '_variables',
+            '_watchers',
+            'eventStream',
+            'utils',
+            'plugin',
+            'createClosure',
+            'subscribeEvent',
+            'subscribe',
+            'postEvent',
+            'resolve',
+            'getDependencies',
+            'addToStack',
+            'variable',
+            'computed',
+            'watch',
+            'dispose'
+        ];
+
+        if (exceptedNames.indexOf(namespace) !== -1) {
+            throw new BaxterError('plugin: name of your plugin is already reserved. Try to rename your plugin');
+        }
+
+        return this[namespace] = plugin;
+    }
+
+    /**
      * @name Baxter.createClosure
      * @param {Function} func
      * @param {*} config
