@@ -63,6 +63,7 @@ That's great, by this data is not reactive. Now let's try this:
      this.title = () => this.fullName + ' (' + this.age + ')';
 
      baxter.watch(this);
+   }
  }
 
  let reactiveUser = new ReactiveUser();
@@ -109,6 +110,7 @@ Test class:
      this.fullName = () => this.surname + ' ' + this.name;
 
      baxter.watch(this);
+   }
  }
 ```
 
@@ -208,7 +210,7 @@ or
           * it's listed in the user dependencies
           */
           return response[this.page - 1];
-        }); /* computed */, [
+        }) /* computed */, [
             {
                 owner: this,
                 key: 'page'
