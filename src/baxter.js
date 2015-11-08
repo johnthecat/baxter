@@ -1,5 +1,6 @@
 import EventService from './services/event';
 import BaxterError from './entities/error';
+import ObservableArray from './entities/array';
 
 /**
  * @class Baxter
@@ -523,6 +524,18 @@ class Baxter {
     }
 
     /**
+     * @name Baxter.array
+     * @param {Object} owner
+     * @param {String} key
+     * @param {Array} initialArray
+     */
+    array(owner, key, initialArray) {
+        let uid = this.utils.createKeyUID(owner, key);
+
+        owner[key] = new ObservableArray(uid, owner, key, this.eventStream, initialArray);
+    }
+
+    /**
      * @name Baxter.watch
      * @param {Object} object
      */
@@ -539,12 +552,15 @@ class Baxter {
             }
 
             let value = object[key];
+
             if (typeof value === 'function') {
                 computedVariables.push({
                     owner: object,
                     key: key,
                     value: value
                 });
+            } else if (value instanceof Array) {
+                this.array(object, key, value);
             } else {
                 this.variable(object, key, value);
             }

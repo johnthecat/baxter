@@ -83,6 +83,10 @@
 
 	var _error2 = _interopRequireDefault(_error);
 
+	var _array = __webpack_require__(4);
+
+	var _array2 = _interopRequireDefault(_array);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function _instanceof(left, right) { if (right != null && right[Symbol.hasInstance]) { return right[Symbol.hasInstance](left); } else { return left instanceof right; } }
@@ -687,6 +691,21 @@
 	        }
 
 	        /**
+	         * @name Baxter.array
+	         * @param {Object} owner
+	         * @param {String} key
+	         * @param {Array} initialArray
+	         */
+
+	    }, {
+	        key: 'array',
+	        value: function array(owner, key, initialArray) {
+	            var uid = this.utils.createKeyUID(owner, key);
+
+	            owner[key] = new _array2.default(uid, owner, key, this.eventStream, initialArray);
+	        }
+
+	        /**
 	         * @name Baxter.watch
 	         * @param {Object} object
 	         */
@@ -706,12 +725,15 @@
 	                }
 
 	                var value = object[key];
+
 	                if (typeof value === 'function') {
 	                    computedVariables.push({
 	                        owner: object,
 	                        key: key,
 	                        value: value
 	                    });
+	                } else if (_instanceof(value, Array)) {
+	                    this.array(object, key, value);
 	                } else {
 	                    this.variable(object, key, value);
 	                }
@@ -1042,6 +1064,66 @@
 	})(Error);
 
 	exports.default = BaxterError;
+
+/***/ },
+/* 4 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	var methods = ['push', 'shift', 'join', 'concat', 'pop', 'unshift', 'slice', 'reverse', 'sort', 'splice'];
+
+	var ObservableArray = function ObservableArray(uid, owner, key, eventStream, initialArray) {
+	    this.uid = uid;
+	    this.owner = owner;
+	    this.key = key;
+	    this.eventStream = eventStream;
+	};
+
+	var _iteratorNormalCompletion = true;
+	var _didIteratorError = false;
+	var _iteratorError = undefined;
+
+	try {
+	    var _loop = function _loop() {
+	        var method = _step.value;
+
+	        ObservableArray.prototype[method] = function () {
+	            var value = Array.prototype[method].apply(this, arguments);
+
+	            this.eventStream.post('update', {
+	                uid: this.uid,
+	                owner: this.owner,
+	                key: this.key,
+	                value: this
+	            });
+
+	            return value;
+	        };
+	    };
+
+	    for (var _iterator = methods[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	        _loop();
+	    }
+	} catch (err) {
+	    _didIteratorError = true;
+	    _iteratorError = err;
+	} finally {
+	    try {
+	        if (!_iteratorNormalCompletion && _iterator.return) {
+	            _iterator.return();
+	        }
+	    } finally {
+	        if (_didIteratorError) {
+	            throw _iteratorError;
+	        }
+	    }
+	}
+
+	exports.default = ObservableArray;
 
 /***/ }
 /******/ ]);
