@@ -34,8 +34,8 @@ Classic example:
      this.surname = 'Dorian';
      this.name = 'John';
      this.age = 30;
-     this.fullName = this.surname + ' ' + this.name;
-     this.title = this.fullName + ' (' + this.age + ')';
+     this.fullName = `${this.surname} ${this.name}`;
+     this.title = `${this.fullName} (${this.age})`;
    }
  }
 
@@ -59,8 +59,8 @@ That's great, by this data is not reactive. Now let's try this:
      this.surname = 'Dorian';
      this.name = 'John';
      this.age = 30;
-     this.fullName = () => this.surname + ' ' + this.name;
-     this.title = () => this.fullName + ' (' + this.age + ')';
+     this.fullName = () => `${this.surname} ${this.name}`;
+     this.title = () => `${this.fullName} (${this.age})`;
 
      baxter.watch(this);
  }
@@ -106,7 +106,7 @@ Test class:
    constructor() {
      this.surname = 'Dorian';
      this.name = 'John';
-     this.fullName = () => this.surname + ' ' + this.name;
+     this.fullName = () => `${this.surname} ${this.name}`;
 
      baxter.watch(this);
  }
@@ -136,9 +136,9 @@ Test class:
 ```javascript
   class Doctor {
     constructor(name, surname) {
-      this.name = 'name';
-      this.surname = 'surname';
-      this.fullName = () => this.name + ' ' + this.surname;
+      this.name = name;
+      this.surname = surname;
+      this.fullName = () => `${this.name} ${this.surname}`;
     }
   }
 
@@ -149,9 +149,9 @@ or
 ```javascript
   class Doctor {
     constructor(name, surname) {
-      this.name = 'name';
-      this.surname = 'surname';
-      this.fullName = () => this.name + ' ' + this.surname;
+      this.name = name;
+      this.surname = surname;
+      this.fullName = () => `${this.name} ${this.surname}`;
 
       baxter.watch(this); //You can call watch inside constructor
     }
@@ -197,10 +197,10 @@ or
       this.page = baxter.observable(this, 'page', 1);
 
       // Sync call
-      this.title = baxter.computed(this, 'title', () => 'Here is ' + this.type.replace('_', ' ') + ' ' + this.name);
+      this.title = baxter.computed(this, 'title', () => `Here is ${this.type.replace('_', ' ')} ${this.name}`);
 
       // Async call
-      this.fullInfo = baxter.computed(this /* owner */, 'title' /* key */, () => fetch('/api/animal/' + this.type + '/' + this.name)
+      this.fullInfo = baxter.computed(this /* owner */, 'title' /* key */, () => fetch(`/api/animal/${this.type}/${this.name}`)
         .then((response) => {
          /**
           * "this.page" cannot be detected as dependency because of
