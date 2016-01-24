@@ -1,3 +1,40 @@
+### 0.3.0
+#### Bug fixes
+
+#### Improvements
+* Increased speed of ```baxter.computed``` change tracking 150-200 times in chrome
+* Increased speed of ```baxter.dispose``` by 15-20%
+
+#### Other
+* Build updated to ES6 specs
+
+
+
+### 0.2.1
+#### Improvements
+* Added ```baxter.plugin``` method
+* Added ```baxter.array``` method
+
+
+
+### 0.2.0
+#### Bug fixes
+* Fixed bug, when variable may be tracked more then one time
+
+#### Improvements
+* Reduced memory usage
+* Increased speed of ```baxter.observable``` change tracking by 15%
+* In ```baxter.watch``` variables registration calls at first, computed - at second
+
+#### Breaking changes
+* ```baxter.observable``` is ```baxter.variable``` now
+
+#### Other
+* Refactored code
+* Updated npm dependencies
+
+
+
 ### 0.1.2
 #### Bug fixes
 * Fixed bug, when computed function calls with wrong context.
@@ -6,6 +43,7 @@
 * Increased performance of computed variables registering 5x times.
 * Now Baxter checks input data and throws error, if something wrong.
 * Now Baxter checks that this variable already tracked.
+
 
 
 ### 0.1.1
