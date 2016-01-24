@@ -548,16 +548,26 @@ class Baxter {
         }
 
         if (!key) {
-            for (let field of (Object.keys(owner))) {
-                let uid = this.utils.createKeyUID(owner, field);
-                let handlers = this._variables.get(uid);
+            let ownerKeys = Object.keys(owner);
+            let ownerKeyIndex = 0,
+                field, uid, handlers,
+                handlersArray, handlerIndex;
+
+            for (ownerKeyIndex; ownerKeyIndex < ownerKeys.length; ownerKeyIndex++) {
+                field = ownerKeys[ownerKeyIndex];
+
+                uid = this.utils.createKeyUID(owner, field);
+                handlers = this._variables.get(uid);
 
                 if (!handlers) {
                     continue;
                 }
 
-                for (let handler of handlers) {
-                    handler.dispose();
+                handlersArray = Array.from(handlers);
+                handlerIndex = 0;
+
+                for (handlerIndex; handlerIndex < handlersArray.length; handlerIndex++) {
+                    handlersArray[handlerIndex].dispose();
                     delete owner[field];
                 }
 
@@ -571,8 +581,11 @@ class Baxter {
                 return;
             }
 
-            for (let handler of handlers) {
-                handler.dispose();
+            let handlersArray = Array.from(handlers);
+            let index = 0;
+
+            for (index; index < handlersArray.length; index++) {
+                handlersArray[index].dispose();
                 delete owner[key];
             }
 

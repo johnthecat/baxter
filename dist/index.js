@@ -681,62 +681,33 @@
 	            }
 
 	            if (!key) {
-	                var _iteratorNormalCompletion = true;
-	                var _didIteratorError = false;
-	                var _iteratorError = undefined;
+	                var ownerKeys = Object.keys(owner);
+	                var ownerKeyIndex = 0,
+	                    field = undefined,
+	                    uid = undefined,
+	                    handlers = undefined,
+	                    handlersArray = undefined,
+	                    handlerIndex = undefined;
 
-	                try {
-	                    for (var _iterator = Object.keys(owner)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	                        var field = _step.value;
+	                for (ownerKeyIndex; ownerKeyIndex < ownerKeys.length; ownerKeyIndex++) {
+	                    field = ownerKeys[ownerKeyIndex];
 
-	                        var uid = this.utils.createKeyUID(owner, field);
-	                        var handlers = this._variables.get(uid);
+	                    uid = this.utils.createKeyUID(owner, field);
+	                    handlers = this._variables.get(uid);
 
-	                        if (!handlers) {
-	                            continue;
-	                        }
-
-	                        var _iteratorNormalCompletion2 = true;
-	                        var _didIteratorError2 = false;
-	                        var _iteratorError2 = undefined;
-
-	                        try {
-	                            for (var _iterator2 = handlers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	                                var handler = _step2.value;
-
-	                                handler.dispose();
-	                                delete owner[field];
-	                            }
-	                        } catch (err) {
-	                            _didIteratorError2 = true;
-	                            _iteratorError2 = err;
-	                        } finally {
-	                            try {
-	                                if (!_iteratorNormalCompletion2 && _iterator2.return) {
-	                                    _iterator2.return();
-	                                }
-	                            } finally {
-	                                if (_didIteratorError2) {
-	                                    throw _iteratorError2;
-	                                }
-	                            }
-	                        }
-
-	                        this._variables.delete(uid);
+	                    if (!handlers) {
+	                        continue;
 	                    }
-	                } catch (err) {
-	                    _didIteratorError = true;
-	                    _iteratorError = err;
-	                } finally {
-	                    try {
-	                        if (!_iteratorNormalCompletion && _iterator.return) {
-	                            _iterator.return();
-	                        }
-	                    } finally {
-	                        if (_didIteratorError) {
-	                            throw _iteratorError;
-	                        }
+
+	                    handlersArray = Array.from(handlers);
+	                    handlerIndex = 0;
+
+	                    for (handlerIndex; handlerIndex < handlersArray.length; handlerIndex++) {
+	                        handlersArray[handlerIndex].dispose();
+	                        delete owner[field];
 	                    }
+
+	                    this._variables.delete(uid);
 	                }
 	            } else {
 	                var uid = this.utils.createKeyUID(owner, key);
@@ -746,30 +717,12 @@
 	                    return;
 	                }
 
-	                var _iteratorNormalCompletion3 = true;
-	                var _didIteratorError3 = false;
-	                var _iteratorError3 = undefined;
+	                var handlersArray = Array.from(handlers);
+	                var index = 0;
 
-	                try {
-	                    for (var _iterator3 = handlers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	                        var handler = _step3.value;
-
-	                        handler.dispose();
-	                        delete owner[key];
-	                    }
-	                } catch (err) {
-	                    _didIteratorError3 = true;
-	                    _iteratorError3 = err;
-	                } finally {
-	                    try {
-	                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	                            _iterator3.return();
-	                        }
-	                    } finally {
-	                        if (_didIteratorError3) {
-	                            throw _iteratorError3;
-	                        }
-	                    }
+	                for (index; index < handlersArray.length; index++) {
+	                    handlersArray[index].dispose();
+	                    delete owner[key];
 	                }
 
 	                this._variables.delete(uid);
