@@ -436,6 +436,9 @@ class Baxter {
             dependencies.add(handledValue.uid);
 
             let subscriber = this.subscribe(handledValue.owner, handledValue.key, () => {
+                /**
+                 * FIXME: bug, after batch of changed isComputing stays true.
+                 */
                 if (isComputing) {
                     return false;
                 }
