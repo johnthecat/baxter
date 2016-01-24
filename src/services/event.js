@@ -2,18 +2,19 @@
  * @class EventService
  */
 class EventService {
-    constructor(defaultContext) {
+    constructor(customContext) {
         /**
-         * @name EventService.channels
+         * @name EventService._channels
          * @type {Object}
+         * @private
          */
-        this.channels = {};
+        this._channels = {};
 
         /**
          * @name EventService.context
          * @type {Object}
          */
-        this.context = defaultContext || this;
+        this.context = customContext || this;
     }
 
     /**
@@ -22,11 +23,11 @@ class EventService {
      * @returns {Set}
      */
     getEvent(event) {
-        if (!(event in this.channels)) {
-            return this.channels[event] = new Set();
+        if (!(event in this._channels)) {
+            return this._channels[event] = new Set();
         }
 
-        return this.channels[event];
+        return this._channels[event];
     }
 
     /**
@@ -76,15 +77,15 @@ class EventService {
         }
 
         if (!handlerToDelete) {
-            return delete this.channels[event];
+            return delete this._channels[event];
         }
 
-        let eventHandlers = this.channels[event];
+        let eventHandlers = this._channels[event];
 
         eventHandlers.delete(handlerToDelete);
 
         if (!eventHandlers.size) {
-            delete this.channels[event];
+            delete this._channels[event];
         }
     }
 
@@ -98,12 +99,15 @@ class EventService {
             throw new Error("Can't post undefined event");
         }
 
-        if (!(event in this.channels)) {
+        if (!(event in this._channels)) {
             return false;
         }
 
-        for (let handler of this.channels[event]) {
-            handler.call(this.context, data);
+        let eventHandlers = Array.from(this._channels[event]);
+        let index = 0, size = eventHandlers.length;
+
+        for (index; index < size; index++) {
+            eventHandlers[index].call(this.context, data);
         }
     }
 }

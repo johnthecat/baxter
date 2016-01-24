@@ -75,24 +75,6 @@ class Baxter {
              */
             createKeyUID: (owner, key) => {
                 return this.utils.getUIDByObject(owner) + ':' + key;
-            },
-
-            /**
-             * @name Baxter.utils.debounce
-             * @param {Function} func
-             * @param {Number} wait
-             * @returns {Function} debounced function
-             */
-            debounce: (func, wait) => {
-                var timeout;
-                return () => {
-                    let later = () => {
-                        func();
-                        timeout = null;
-                    };
-                    clearTimeout(timeout);
-                    timeout = setTimeout(later, wait);
-                };
             }
         };
 
@@ -101,14 +83,12 @@ class Baxter {
                 get: (config) => {
                     let value = config.getValue();
 
-                    this.postEvent('get',
-                        {
-                            uid: config.uid,
-                            owner: config.owner,
-                            key: config.key,
-                            value: value
-                        }
-                    );
+                    this.postEvent('get', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key,
+                        value: value
+                    });
                     return value;
                 },
                 set: (config, newValue) => {
@@ -120,11 +100,12 @@ class Baxter {
 
                     this.postEvent('will-change', {
                         uid: config.uid,
-                        owner: config.owner,
-                        key: config.key
+                        type: 'variable'
                     });
 
                     config.setValue(newValue);
+
+                    this.postEvent('will-change-all');
 
                     this.postEvent('update',
                         {
@@ -175,8 +156,6 @@ class Baxter {
                 }
             }
         };
-
-        this.subscribeEvent('will-change', this.utils.debounce(() => this.postEvent('will-change-all'), 0));
     }
 
     /**
@@ -281,7 +260,7 @@ class Baxter {
         let eventToListen = availableEvents.indexOf(eventType) !== -1 && eventType;
         let eventHandler = (config) => {
             if (config.uid === uid) {
-                subscriber(config.value, config.oldValue);
+                subscriber(config);
             }
         };
 
@@ -294,17 +273,18 @@ class Baxter {
 
     /**
      * @name Baxter.resolve
-     * @param {Set|Array} dependencies
+     * @param {Set} dependencies
      * @returns {Promise}
      */
     resolve(dependencies) {
-        if (!(Symbol.iterator in dependencies)) {
-            throw new BaxterError('resolve: dependencies are not iterable.');
-        }
-
         let result = new Set();
+        let dependenciesArray = Array.from(dependencies);
+        let index = 0;
+        let dependency;
 
-        for (let dependency of dependencies) {
+        for (index; index < dependenciesArray.length; index++) {
+            dependency = dependenciesArray[index];
+
             result.add(this._callstack.get(dependency));
         }
 
@@ -336,27 +316,28 @@ class Baxter {
      * @param {Object} owner
      * @param {String} key
      * @param {Function} callback
+     * @param {Boolean} async
      */
-    addToStack(owner, key, callback) {
+    addToStack(owner, key, callback, async = false) {
         let uid = this.utils.createKeyUID(owner, key);
 
         this.postEvent('will-change', {
             uid: uid,
-            owner: owner,
-            key: key
+            type: 'computed'
         });
 
-        this._callstack.set(uid, new Promise((resolve) => {
+        let promise = async ? callback : new Promise((resolve) => {
             this.subscribeEvent('will-change-all', () => {
                 resolve(callback());
             }, true);
-        })
-            .then(() => {
-                this._callstack.delete(uid);
-                if (!this._callstack.size) {
-                    this.postEvent('change-complete');
-                }
-            }));
+        });
+
+        this._callstack.set(uid, promise.then(() => {
+            this._callstack.delete(uid);
+            if (!this._callstack.size) {
+                this.postEvent('change-complete');
+            }
+        }));
     }
 
     /**
@@ -381,7 +362,10 @@ class Baxter {
         }
 
         let value = initialValue;
-        let utils = {
+        let closure = {
+            uid: uid,
+            owner: owner,
+            key: key,
             getValue: () => value,
             setValue: (newValue) => value = newValue
         };
@@ -391,19 +375,8 @@ class Baxter {
         Object.defineProperty(owner, key,
             {
                 configurable: true,
-                get: this.createClosure(this._watchers.variable.get, {
-                    uid: uid,
-                    owner: owner,
-                    key: key,
-                    getValue: utils.getValue
-                }),
-                set: this.createClosure(this._watchers.variable.set, {
-                    uid: uid,
-                    owner: owner,
-                    key: key,
-                    setValue: utils.setValue,
-                    getValue: utils.getValue
-                })
+                get: this.createClosure(this._watchers.variable.get, closure),
+                set: this.createClosure(this._watchers.variable.set, closure)
             }
         );
 
@@ -438,36 +411,25 @@ class Baxter {
         }
 
         let latestValue;
-        let previousValue;
         let isComputing = false;
         let dependencies = new Set();
         let handlers = new Set();
-        let utils = {
-            getValue: () => latestValue,
+        let closure = {
+            uid: uid,
+            owner: owner,
+            key: key,
             setValue: (newValue) => latestValue = newValue,
-            setIsComputing: (value) => isComputing = value,
-            isComputing: () => isComputing
+            getValue: () => latestValue,
+            isComputing: () => isComputing,
+            setIsComputing: (value) => isComputing = value
         };
 
         this._variables.set(uid, handlers);
 
         Object.defineProperty(owner, key, {
             configurable: true,
-            get: this.createClosure(this._watchers.computed.get, {
-                uid: uid,
-                owner: owner,
-                key: key,
-                getValue: utils.getValue
-            }),
-            set: this.createClosure(this._watchers.computed.set, {
-                uid: uid,
-                owner: owner,
-                key: key,
-                setValue: utils.setValue,
-                getValue: utils.getValue,
-                isComputing: utils.isComputing,
-                setIsComputing: utils.setIsComputing
-            })
+            get: this.createClosure(this._watchers.computed.get, closure),
+            set: this.createClosure(this._watchers.computed.set, closure)
         });
 
         let handleObservable = (handledValue) => {
@@ -480,41 +442,42 @@ class Baxter {
 
                 isComputing = true;
 
-                this.addToStack(owner, key, () => {
-                    return this.resolve(dependencies)
-                        .then(() => {
-                            previousValue = latestValue;
-                            return computedObservable.call(owner);
-                        })
-                        .then((value) => {
-                            owner[key] = value;
-                        })
-                        .catch(() => {
-                            owner[key] = undefined;
-                        });
-                });
+                this.addToStack(owner, key, () => this.resolve(dependencies)
+                    .then(() => computedObservable.call(owner))
+                    .then((value) => {
+                        owner[key] = value;
+                    })
+                    .catch(() => {
+                        owner[key] = undefined;
+                    })
+                );
             }, 'will-change');
 
             handlers.add(subscriber);
         };
 
-        if (Symbol.iterator in Object(userDependencies)) {
-            for (let userDependency of userDependencies) {
+        if (userDependencies) {
+            for (let userDependency in userDependencies) {
+                if (!userDependencies.hasOwnProperty(userDependency)) {
+                    continue;
+                }
+
                 handleObservable(userDependency);
             }
         }
 
         let calculatedValue = this.getDependencies(owner, computedObservable, handleObservable);
         if (calculatedValue instanceof Promise) {
-            calculatedValue.then((result) => {
-                this.addToStack(owner, key, () => {
-                    return this.resolve(dependencies)
-                        .then(() => {
-                            isComputing = true;
-                            owner[key] = result;
-                        });
-                });
-            });
+            this.addToStack(
+                owner,
+                key,
+                calculatedValue
+                    .then((result) => {
+                        isComputing = true;
+                        owner[key] = result;
+                    }),
+                true
+            );
         } else {
             isComputing = true;
             owner[key] = calculatedValue;
