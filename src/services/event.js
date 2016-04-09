@@ -1,3 +1,8 @@
+const ERROR = {
+    NO_INIT_PARAMETERS: `Can't init event listener: no parameters given`,
+    NO_EVENT: `Event is undefined. Must be a String`
+};
+
 /**
  * @class EventService
  */
@@ -32,12 +37,12 @@ class EventService {
 
     /**
      * @name EventService.on
-     * @param {string} event - Event name
-     * @param {function} handler - Callback function with data as argument
+     * @param {String} event - Event name
+     * @param {Function} handler - Callback function with data as argument
      */
     on(event, handler) {
         if (!event || !handler) {
-            throw new Error("Can't init event listener: no parameters given");
+            throw new Error(ERROR.NO_INIT_PARAMETERS);
         }
 
         this.getEvent(event).add(handler);
@@ -45,12 +50,12 @@ class EventService {
 
     /**
      * @name EventService.once
-     * @param {string} event
-     * @param {function} handler
+     * @param {String} event
+     * @param {Function} handler
      */
     once(event, handler) {
         if (!event || !handler) {
-            throw new Error("Can't init event listener: no parameters given");
+            throw new Error(ERROR.NO_INIT_PARAMETERS);
         }
 
         let that = this;
@@ -61,19 +66,17 @@ class EventService {
             that.off(event, handlerWrapper);
             return handler(data);
         }
-
-
     }
 
     /**
      * @name EventService.off
-     * @param {string} event
-     * @param {function} [handlerToDelete]
-     * @returns {boolean}
+     * @param {String} event
+     * @param {Function} [handlerToDelete]
+     * @returns {Boolean}
      */
     off(event, handlerToDelete) {
         if (!event) {
-            throw new Error("Can't remove event listener: no event");
+            throw new Error(ERROR.NO_EVENT);
         }
 
         if (!handlerToDelete) {
@@ -91,12 +94,12 @@ class EventService {
 
     /**
      * @name EventService.post
-     * @param {string} event
+     * @param {String} event
      * @param {*} data
      */
     post(event, data) {
         if (!event) {
-            throw new Error("Can't post undefined event");
+            throw new Error(ERROR.NO_EVENT);
         }
 
         if (!(event in this._channels)) {

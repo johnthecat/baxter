@@ -31,7 +31,11 @@ bower install baxter --save
 ## Performance
 
 There are some benchmark results for registering action (creating instance, track it and then dispose) and value change action (change variable and wait, until al dependencies will resolve)
-Test class:
+
+**Hardware:** Macbook Pro middle 2015 - Core i5, 8Gb RAM
+
+
+**Test class:**
 
 ```javascript
  class Test {
@@ -47,8 +51,9 @@ Test class:
 
 | Browser    | Registration (ops/sec) | Changing ```Test.name``` (ops/sec) |
 | -----------|------------------------| -----------------------------------|
-| Chrome 46  | 27.000 - 34.000        | 360.000 - 405.000                  |
-| Safari 9   | 41.000 - 44.000        | 380.000 - 415.000                  |
+| Chrome 49  | 27 000 - 34 000        | 400 000 - 600 000                  |
+| Safari 9   | 41 000 - 44 000        | 380 000 - 415 000                  |
+| Firefox 43 | 20 000 - 24 000        | 290 000 - 320 000                  |
 
 
 

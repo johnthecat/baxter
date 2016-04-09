@@ -1,13 +1,11 @@
-'use strict';
+import gulp from 'gulp';
+import wrench from 'wrench';
 
-var gulp = require('gulp');
-var wrench = require('wrench');
-
-wrench.readdirSyncRecursive('./gulp').filter(function (file) {
-    return (/\.(js)$/i).test(file);
-}).map(function (file) {
-    require('./gulp/' + file);
-});
+wrench.readdirSyncRecursive('./gulp')
+    .filter((file) => (/\.(js)$/i).test(file))
+    .forEach((file) => {
+        require('./gulp/' + file);
+    });
 
 gulp.task('default', function () {
     gulp.start('build:prod');

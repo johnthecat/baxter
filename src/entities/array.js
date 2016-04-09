@@ -30,7 +30,7 @@ for (let method of methods) {
         });
 
         return value;
-    }
+    };
 }
 
 

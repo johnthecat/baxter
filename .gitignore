@@ -1,6 +1,5 @@
 .DS_Store
 .editorconfig
 node_modules
-bench
 index.html
-src/entities/array.js
+npm-debug.log

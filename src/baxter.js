@@ -3,81 +3,138 @@ import BaxterError from './entities/error';
 import ObservableArray from './entities/array';
 
 /**
+ * @description Map of lib errors
+ * @type {Object.<String>}
+ */
+const ERROR = {
+    MUST_BE_DEFINED: `variables must be defined`,
+    NO_SETTER_TO_COMPUTED: `you can't set value to computed variable`,
+    PLUGIN_NAME_RESERVED: (plugin) => `name ${plugin} is already reserved. Try to rename your plugin`,
+    WRONG_EVENT: (eventType) => `listening ${eventType} event is not accepted`,
+    IS_NOT_A_STRING: (variable) => `variable must be a string: ${typeof variable} ${variable}`,
+    IS_NOT_A_FUNCTION: (variable) => `variable must be a function: ${typeof variable} ${variable}`,
+    IS_NOT_AN_OBJECT: (variable) => `variable must be an object: ${typeof variable} ${variable}`
+};
+
+/**
+ * @description List of reserved names
+ * @type {Array.<String>}
+ */
+const EXPECTED_NAMES = [
+    '_callstack',
+    '_variables',
+    '_watchers',
+    'eventStream',
+    'utils',
+    'plugin',
+    'createClosure',
+    'subscribeEvent',
+    'subscribe',
+    'postEvent',
+    'resolve',
+    'getDependencies',
+    'addToStack',
+    'variable',
+    'computed',
+    'watch',
+    'dispose'
+];
+
+/**
+ * @description Field name for object uid
+ * @type {String}
+ */
+const UID_FIELD = '__uid__';
+
+/**
+ * @description Basic unique id, other uids are incremented from this
+ * @type {Number}
+ */
+let uid = 1;
+
+
+/**
  * @class Baxter
  * @description Main class, provides library as it self.
  */
 class Baxter {
-    constructor() {
+    /**
+     * @param {EventService} EventService
+     */
+    constructor(EventService) {
         /**
-         * @description Basic unique id, other uids are incremented from this
-         * @type {number}
-         */
-        let UID = 1;
-
-        /**
-         * @name Baxter._callstack
-         * @type {Map}
+         * @name Baxter#_callstack
+         * @type {Map.<Promise>}
+         * @private
+         * @description Callstack is a map if promises, that Baxter must resolve.
          */
         this._callstack = new Map();
 
         /**
-         * @name Baxter._variables
-         * @type {Map}
+         * @name Baxter#_variables
+         * @type {Map.<Set>}
+         * @private
+         * @description handles all subscriptions for property object disposing
          */
         this._variables = new Map();
 
         /**
-         * @name Baxter.eventStream
+         * @name Baxter#eventStream
          * @type {EventService}
          * @description Provides events service
          */
         this.eventStream = new EventService(this);
 
         /**
-         * @name Baxter.utils
+         * @name Baxter#utils
          * @type {Object}
          */
         this.utils = {
             /**
-             * @name Baxter.utils.createObjectUID
-             * @param object
-             * @returns {number}
+             * @name Baxter#utils.createObjectUID
+             * @param {Object} object
+             * @returns {Number}
              */
             createObjectUID: (object) => {
-                let uid = UID++;
+                let currentUID = uid++;
 
-                Object.defineProperty(object, '__uid__', {
+                Object.defineProperty(object, UID_FIELD, {
                     enumerable: false,
-                    value: uid
+                    value: currentUID
                 });
 
-                return uid;
+                return currentUID;
             },
 
             /**
-             * @name Baxter.utils.getUIDByObject
-             * @param object
+             * @name Baxter#utils.getUIDByObject
+             * @param {Object} object
              * @returns {*}
              */
             getUIDByObject: (object) => {
-                if (!object['__uid__']) {
+                if (!object[UID_FIELD]) {
                     return this.utils.createObjectUID(object);
                 }
 
-                return object['__uid__'];
+                return object[UID_FIELD];
             },
 
             /**
-             * @name Baxter.utils.createKeyUID
-             * @param owner
-             * @param key
-             * @returns {string}
+             * @name Baxter#utils.createKeyUID
+             * @param {Object} owner
+             * @param {String} key
+             * @returns {String}
              */
             createKeyUID: (owner, key) => {
                 return this.utils.getUIDByObject(owner) + ':' + key;
             }
         };
 
+        /**
+         * @name Baxter#_watchers
+         * @type {Object}
+         * @private
+         */
         this._watchers = {
             variable: {
                 get: (config) => {
@@ -91,6 +148,7 @@ class Baxter {
                     });
                     return value;
                 },
+
                 set: (config, newValue) => {
                     let oldValue = config.getValue();
 
@@ -106,18 +164,16 @@ class Baxter {
                     config.setValue(newValue);
 
                     this.postEvent('will-change-all');
-
-                    this.postEvent('update',
-                        {
-                            uid: config.uid,
-                            owner: config.owner,
-                            key: config.key,
-                            value: newValue,
-                            oldValue: oldValue
-                        }
-                    );
+                    this.postEvent('update', {
+                        uid: config.uid,
+                        owner: config.owner,
+                        key: config.key,
+                        value: newValue,
+                        oldValue: oldValue
+                    });
                 }
             },
+
             computed: {
                 get: (config) => {
                     let value = config.getValue();
@@ -131,11 +187,12 @@ class Baxter {
 
                     return value;
                 },
+
                 set: (config, computedResult) => {
                     let oldValue = config.getValue();
 
                     if (!config.isComputing()) {
-                        throw new BaxterError('you can\'t set value to computed');
+                        throw new BaxterError(ERROR.NO_SETTER_TO_COMPUTED);
                     }
 
                     if (computedResult === oldValue) {
@@ -159,63 +216,41 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.plugin
+     * @name Baxter#plugin
      * @param {String} namespace
      * @param {*} plugin
      */
     plugin(namespace, plugin) {
-        let exceptedNames = [
-            '_callstack',
-            '_variables',
-            '_watchers',
-            'eventStream',
-            'utils',
-            'plugin',
-            'createClosure',
-            'subscribeEvent',
-            'subscribe',
-            'postEvent',
-            'resolve',
-            'getDependencies',
-            'addToStack',
-            'variable',
-            'computed',
-            'watch',
-            'dispose'
-        ];
-
-        if (exceptedNames.indexOf(namespace) !== -1) {
-            throw new BaxterError('plugin: name of your plugin is already reserved. Try to rename your plugin');
+        if (EXPECTED_NAMES.indexOf(namespace) !== -1) {
+            throw new BaxterError(ERROR.PLUGIN_NAME_RESERVED(namespace));
         }
 
         return this[namespace] = plugin;
     }
 
     /**
-     * @name Baxter.createClosure
+     * @name Baxter#createClosure
      * @param {Function} func
      * @param {*} config
      * @returns {Function}
      */
     createClosure(func, config) {
-        return (data) => {
-            return func(config, data);
-        }
+        return (data) => func(config, data);
     }
 
     /**
-     * @name Baxter.subscribeEvent
+     * @name Baxter#subscribeEvent
      * @param {String} eventType
      * @param {Function} subscriber
-     * @param {Boolean} [once]
+     * @param {Boolean} [once=false]
      */
     subscribeEvent(eventType, subscriber, once = false) {
         if (typeof eventType !== 'string') {
-            throw new BaxterError('subscribeEvent: eventType is not defined.');
+            throw new BaxterError(ERROR.IS_NOT_A_STRING(eventType));
         }
 
         if (typeof subscriber !== 'function') {
-            throw new BaxterError('subscribeEvent: subscriber function is not defined.');
+            throw new BaxterError(ERROR.IS_NOT_A_FUNCTION(subscriber));
         }
 
         if (once) {
@@ -225,25 +260,25 @@ class Baxter {
 
             return {
                 dispose: () => this.eventStream.off(eventType, subscriber)
-            }
+            };
         }
     }
 
     /**
-     * @name Baxter.postEvent
+     * @name Baxter#postEvent
      * @param {String} eventType
      * @param {*} [data]
      */
     postEvent(eventType, data) {
         if (typeof eventType !== 'string') {
-            throw new BaxterError('postEvent: eventType is not defined.');
+            throw new BaxterError(ERROR.IS_NOT_A_STRING(eventType));
         }
 
         this.eventStream.post(eventType, data);
     }
 
     /**
-     * @name Baxter.subscribe
+     * @name Baxter#subscribe
      * @param {Object} owner
      * @param {String} key
      * @param {Function} subscriber
@@ -253,7 +288,7 @@ class Baxter {
      */
     subscribe(owner, key, subscriber, eventType = 'update', once = false) {
         if (!owner || !key || !subscriber) {
-            throw new BaxterError('subscribe: can\'t subscribe variable without owner, key or callback function.');
+            throw new BaxterError(ERROR.MUST_BE_DEFINED);
         }
         let uid = this.utils.createKeyUID(owner, key);
         let availableEvents = ['will-change', 'update'];
@@ -265,14 +300,14 @@ class Baxter {
         };
 
         if (!eventToListen) {
-            throw new BaxterError('subscribe: listening ' + eventType + ' event is not accepted.');
+            throw new BaxterError(ERROR.WRONG_EVENT(eventType));
         }
 
         return this.subscribeEvent(eventToListen, eventHandler, once);
     }
 
     /**
-     * @name Baxter.resolve
+     * @name Baxter#resolve
      * @param {Set} dependencies
      * @returns {Promise}
      */
@@ -292,7 +327,7 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.getDependencies
+     * @name Baxter#getDependencies
      * @param {Object} context
      * @param {Function} computed
      * @param {Function} callback
@@ -300,7 +335,7 @@ class Baxter {
      */
     getDependencies(context, computed, callback) {
         if (!context || !computed || !callback) {
-            throw new BaxterError('getDependencies: there is no context, computed function or callback.');
+            throw new BaxterError(ERROR.MUST_BE_DEFINED);
         }
 
         let listener = this.subscribeEvent('get', callback);
@@ -312,25 +347,30 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.addToStack
+     * @name Baxter#addToStack
      * @param {Object} owner
      * @param {String} key
-     * @param {Function} callback
-     * @param {Boolean} async
+     * @param {Function|Promise} callback
+     * @param {Boolean} [async=false]
      */
     addToStack(owner, key, callback, async = false) {
         let uid = this.utils.createKeyUID(owner, key);
+        let promise;
 
         this.postEvent('will-change', {
             uid: uid,
             type: 'computed'
         });
 
-        let promise = async ? callback : new Promise((resolve) => {
-            this.subscribeEvent('will-change-all', () => {
-                resolve(callback());
-            }, true);
-        });
+        if (async) {
+            promise = callback;
+        } else {
+            promise = new Promise((resolve) => {
+                this.subscribeEvent('will-change-all', () => {
+                    resolve(callback());
+                }, true);
+            });
+        }
 
         this._callstack.set(uid, promise.then(() => {
             this._callstack.delete(uid);
@@ -341,7 +381,7 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.variable
+     * @name Baxter#variable
      * @param {Object} owner
      * @param {String} key
      * @param {*} [initialValue]
@@ -349,10 +389,10 @@ class Baxter {
      */
     variable(owner, key, initialValue) {
         if (typeof owner !== 'object') {
-            throw new BaxterError('variable: owner object in not defined.');
+            throw new BaxterError(ERROR.IS_NOT_AN_OBJECT(owner));
         }
         if (typeof key !== 'string') {
-            throw new BaxterError('variable: key string in not defined.');
+            throw new BaxterError(ERROR.IS_NOT_A_STRING(key));
         }
 
         let uid = this.utils.createKeyUID(owner, key);
@@ -384,7 +424,7 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.computed
+     * @name Baxter#computed
      * @param {Object} owner
      * @param {String} key
      * @param {Function} computedObservable
@@ -393,15 +433,15 @@ class Baxter {
      */
     computed(owner, key, computedObservable, userDependencies) {
         if (typeof owner !== 'object') {
-            throw new BaxterError('computed: owner object in not defined.');
+            throw new BaxterError(ERROR.IS_NOT_AN_OBJECT(owner));
         }
 
         if (typeof key !== 'string') {
-            throw new BaxterError('computed: key string in not defined.');
+            throw new BaxterError(ERROR.IS_NOT_A_STRING(key));
         }
 
         if (typeof computedObservable !== 'function') {
-            throw new BaxterError('computed: computedObservable function in not defined.');
+            throw new BaxterError(ERROR.IS_NOT_A_FUNCTION(computedObservable));
         }
 
         let uid = this.utils.createKeyUID(owner, key);
@@ -474,11 +514,10 @@ class Baxter {
             this.addToStack(
                 owner,
                 key,
-                calculatedValue
-                    .then((result) => {
-                        isComputing = true;
-                        owner[key] = result;
-                    }),
+                calculatedValue.then((result) => {
+                    isComputing = true;
+                    owner[key] = result;
+                }),
                 true
             );
         } else {
@@ -490,7 +529,7 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.array
+     * @name Baxter#array
      * @param {Object} owner
      * @param {String} key
      * @param {Array} initialArray
@@ -502,12 +541,12 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.watch
+     * @name Baxter#watch
      * @param {Object} object
      */
     watch(object) {
         if (typeof object !== 'object') {
-            throw new BaxterError('watch: object is not defined.');
+            throw new BaxterError(ERROR.IS_NOT_AN_OBJECT(object));
         }
 
         let computedVariables = [];
@@ -541,13 +580,13 @@ class Baxter {
     }
 
     /**
-     * @name Baxter.dispose
+     * @name Baxter#dispose
      * @param {Object} owner
      * @param {String} [key]
      */
     dispose(owner, key) {
         if (typeof owner !== 'object') {
-            throw new BaxterError('Dispose: object is not defined.');
+            throw new BaxterError(ERROR.IS_NOT_AN_OBJECT(owner));
         }
 
         if (!key) {
@@ -597,4 +636,4 @@ class Baxter {
     }
 }
 
-export default new Baxter();
+export default new Baxter(EventService);
