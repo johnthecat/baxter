@@ -1,6 +1,7 @@
 import EventService from './services/event';
 import BaxterError from './entities/error';
 import ObservableArray from './entities/array';
+import Stack from './entities/stack';
 
 /**
  * @description Map of lib errors
@@ -21,7 +22,7 @@ const ERROR = {
  * @type {Array.<String>}
  */
 const EXPECTED_NAMES = [
-    '_callstack',
+    '_stack',
     '_variables',
     '_watchers',
     'eventStream',
@@ -63,12 +64,12 @@ class Baxter {
      */
     constructor(EventService) {
         /**
-         * @name Baxter#_callstack
-         * @type {Map.<Promise>}
+         * @name Baxter#_stack
+         * @type {Stack}
          * @private
          * @description Callstack is a map if promises, that Baxter must resolve.
          */
-        this._callstack = new Map();
+        this._stack = new Stack();
 
         /**
          * @name Baxter#_variables
@@ -312,18 +313,9 @@ class Baxter {
      * @returns {Promise}
      */
     resolve(dependencies) {
-        let result = new Set();
         let dependenciesArray = Array.from(dependencies);
-        let index = 0;
-        let dependency;
 
-        for (index; index < dependenciesArray.length; index++) {
-            dependency = dependenciesArray[index];
-
-            result.add(this._callstack.get(dependency));
-        }
-
-        return Promise.all(result);
+        return Promise.all(this._stack.getDependencies(dependenciesArray));
     }
 
     /**
@@ -372,9 +364,9 @@ class Baxter {
             });
         }
 
-        this._callstack.set(uid, promise.then(() => {
-            this._callstack.delete(uid);
-            if (!this._callstack.size) {
+        this._stack.add(uid, promise.then(() => {
+            this._stack.delete(uid);
+            if (!this._stack.size) {
                 this.postEvent('change-complete');
             }
         }));
