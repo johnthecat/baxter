@@ -1,6 +1,6 @@
 {
     "name": "baxter",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Reactive binding with minimal additional layer",
     "license": "MIT",
     "homepage": "https://github.com/baxterjs/baxter",
@@ -13,11 +13,10 @@
     },
     "main": "./dist/index.min.js",
     "ignore": [
-        "gulpfile.js",
+        "gulpfile.babel.js",
         "index.html",
         "package.json",
         "test",
-        "src",
         "gulp"
     ]
 }

@@ -15,7 +15,9 @@ Baxter provides OORP without functional style.
 * **Event driven architecture** - No dirty checking, no extra work when idle, Baxter works only when you really need it. You can easily listen events from Baxter and provide your own logic.
 * **Correct async resolving** - If computed variable returns Promise, then field equals async call result, and all dependencies will wait until Promise get resolved.
 * **Well optimized** - Each method is tested on performance.
-* **Tiny weight** - Minified baxter size is only 10.5kb.
+* **Tiny weight** - Minified baxter size is only 11kb.
+
+
 
 ## Install
 
@@ -23,6 +25,38 @@ Bower:
 ```
 bower install baxter --save
 ```
+
+
+
+## Performance
+
+There are some benchmark results for registering action (creating instance, track it and then dispose) and value change action (change variable and wait, until al dependencies will resolve)
+
+**Hardware:** Macbook Pro middle 2015 - Core i5, 8Gb RAM
+
+
+**Test class:**
+
+```javascript
+ class Test {
+   constructor() {
+     this.surname = 'Dorian';
+     this.name = 'John';
+     this.fullName = () => `${this.surname} ${this.name}`;
+
+     baxter.watch(this);
+   }
+ }
+```
+
+| Browser    | Registration (ops/sec) | Changing ```Test.name``` (ops/sec) |
+| -----------|------------------------| -----------------------------------|
+| Chrome 49  | 27 000 - 34 000        | 400 000 - 600 000                  |
+| Safari 9   | 41 000 - 44 000        | 380 000 - 415 000                  |
+| Firefox 43 | 20 000 - 24 000        | 290 000 - 320 000                  |
+
+
+
 
 ## Examples
 
@@ -63,6 +97,7 @@ That's great, by this data is not reactive. Now let's try this:
      this.title = () => `${this.fullName} (${this.age})`;
 
      baxter.watch(this);
+   }
  }
 
  let reactiveUser = new ReactiveUser();
@@ -94,28 +129,27 @@ But:
   console.log(user.title) //Dorian John (30)
 ```
 
-Prototype is not changed at all.
-
-## Performance
-
-There are some benchmark results for registering action (creating instance, track it and then dispose) and value change action (change variable and wait, until al dependencies will resolve)
-Test class:
+Prototype is not changed at all:
 
 ```javascript
- class Test {
-   constructor() {
-     this.surname = 'Dorian';
-     this.name = 'John';
-     this.fullName = () => `${this.surname} ${this.name}`;
+  class ProtoTest {
+    constructor () {
+      this.name = 'test';
 
-     baxter.watch(this);
- }
+      baxter.watch(this);
+    }
+
+    protoMethod() {
+      return this.name;
+    }
+  }
+
+  let protoTest = new ProtoTest();
+
+  (typeof protoTest.protoMethod === 'function') //true
 ```
 
-| Browser    | Registration (ops/sec) | Changing ```Test.name``` (ops/sec) |
-| -----------|------------------------| -----------------------------------|
-| Chrome 46  | 27.000 - 28.000        | 4.500 - 5.000                      |
-| Safari 9   | 41.000 - 44.000        | 350.000 - 380.000                  |
+
 
 ## API reference
 
@@ -169,7 +203,7 @@ or
 ```javascript
   class Raccoon {
     constructor(name) {
-      this.name = baxter.observable(this, 'name', name);
+      this.name = baxter.variable(this, 'name', name);
     }
   }
 
@@ -190,11 +224,11 @@ or
 ```javascript
   class Animal {
     constructor(type, name) {
-      this.type = baxter.observable(this, 'type', type);
-      this.name = baxter.observable(this, 'name', name);
+      this.type = baxter.variable(this, 'type', type);
+      this.name = baxter.variable(this, 'name', name);
 
       // What page we need in async call
-      this.page = baxter.observable(this, 'page', 1);
+      this.page = baxter.variable(this, 'page', 1);
 
       // Sync call
       this.title = baxter.computed(this, 'title', () => `Here is ${this.type.replace('_', ' ')} ${this.name}`);
@@ -208,7 +242,7 @@ or
           * it's listed in the user dependencies
           */
           return response[this.page - 1];
-        }); /* computed */, [
+        }) /* computed */, [
             {
                 owner: this,
                 key: 'page'
